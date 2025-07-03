@@ -1,0 +1,628 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Misskey机器人核心模块
+
+这个模块实现了Misskey机器人的核心功能，包括自动发帖、响应@和聊天等。
+"""
+
+import asyncio
+import json
+from collections import deque
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+from loguru import logger
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+from .config import Config
+from .misskey_api import MisskeyAPI
+from .deepseek_api import DeepSeekAPI
+from .exceptions import (
+    MisskeyBotError,
+    ConfigurationError,
+    APIConnectionError,
+    APIRateLimitError,
+    AuthenticationError
+)
+from .constants import (
+    DEFAULT_MAX_RETRIES,
+    MAX_PROCESSED_ITEMS_CACHE,
+    DEFAULT_POLLING_INTERVAL
+)
+
+# 错误消息常量
+DEFAULT_ERROR_REPLY_MAX_LENGTH = 500
+ERROR_MSG_RATE_LIMIT = "抱歉，请求过于频繁，请稍后再试。"
+ERROR_MSG_AUTH_FAILED = "抱歉，服务配置有误，请联系管理员。"
+ERROR_MSG_CONNECTION_FAILED = "抱歉，AI服务暂时不可用，请稍后再试。"
+ERROR_MSG_VALIDATION_FAILED = "抱歉，请求参数无效，请检查输入。"
+ERROR_MSG_RESOURCE_EXHAUSTED = "抱歉，系统资源不足，请稍后再试。"
+ERROR_MSG_UNKNOWN_ERROR = "抱歉，处理您的消息时出现了错误。"
+
+
+class MisskeyBot:
+    """Misskey机器人类"""
+    
+    async def __aenter__(self):
+        """异步上下文管理器入口"""
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """异步上下文管理器出口"""
+        if hasattr(self, '_cleanup_needed') and self._cleanup_needed:
+            await self.stop()
+        return False
+    
+    def __init__(self, config: Config):
+        """初始化Misskey机器人
+        
+        Args:
+            config: 配置对象
+            
+        Raises:
+            ConfigurationError: 当配置无效时
+            ValueError: 当输入参数无效时
+        """
+        if not isinstance(config, Config):
+            raise ValueError("配置参数必须是Config类型")
+        
+        self.config = config
+        
+        # 初始化API客户端
+        try:
+            self.misskey = MisskeyAPI(
+                instance_url=config.get("misskey.instance_url"),
+                access_token=config.get("misskey.access_token"),
+                config=config,
+            )
+            
+            self.deepseek = DeepSeekAPI(
+                api_key=config.get("deepseek.api_key"),
+                model=config.get("deepseek.model"),
+            )
+            
+            # 标记是否需要清理资源
+            self._cleanup_needed = True
+            
+            logger.info("API客户端初始化成功")
+            
+        except (ValueError, AuthenticationError) as e:
+            logger.error(f"API客户端配置错误: {e}")
+            raise ConfigurationError(f"API客户端配置错误: {e}")
+        except (ImportError, AttributeError) as e:
+            logger.error(f"API客户端依赖错误: {e}")
+            raise ConfigurationError(f"API客户端依赖错误: {e}")
+        except Exception as e:
+            logger.error(f"API客户端初始化未知错误: {e}")
+            raise ConfigurationError(f"API客户端初始化未知错误: {e}")
+        
+        # 初始化调度器
+        try:
+            self.scheduler = AsyncIOScheduler()
+            logger.info("调度器初始化成功")
+        except ImportError as e:
+            logger.error(f"调度器依赖缺失: {e}")
+            raise ConfigurationError(f"调度器依赖缺失: {e}")
+        except (ValueError, TypeError) as e:
+            logger.error(f"调度器配置错误: {e}")
+            raise ConfigurationError(f"调度器配置错误: {e}")
+        except Exception as e:
+            logger.error(f"调度器初始化未知错误: {e}")
+            raise ConfigurationError(f"调度器初始化未知错误: {e}")
+        
+        # 记录已处理的提及和消息（使用deque提高性能）
+        self.processed_mentions: deque = deque(maxlen=MAX_PROCESSED_ITEMS_CACHE)
+        self.processed_messages: deque = deque(maxlen=MAX_PROCESSED_ITEMS_CACHE)
+        
+        # 记录最后一次自动发帖的时间
+        self.last_auto_post_time = datetime.now() - timedelta(hours=24)
+        
+        # 记录今日发帖数量
+        self.posts_today = 0
+        self.today = datetime.now().date()
+        
+        # 系统提示词
+        self.system_prompt = config.get("system_prompt", "")
+        
+        # 运行状态标志
+        self.running = False
+        
+        # 任务列表
+        self.tasks = []
+        
+        # 错误统计
+        self.error_counts = {
+            'api_errors': 0,
+            'rate_limit_errors': 0,
+            'auth_errors': 0,
+            'connection_errors': 0
+        }
+        
+        logger.info("Misskey机器人初始化完成")
+     
+    def _handle_error(self, error: Exception, context: str = "") -> str:
+        """统一处理和统计错误
+        
+        Args:
+            error: 异常对象
+            context: 错误上下文信息
+            
+        Returns:
+            str: 用户友好的错误消息
+        """
+        error_type = type(error).__name__
+        self.error_counts[error_type] = self.error_counts.get(error_type, 0) + 1
+        
+        # 记录详细错误信息
+        logger.error(f"错误类型: {error_type}, 上下文: {context}, 详情: {str(error)}")
+        
+        # 返回用户友好的错误消息
+        if isinstance(error, APIRateLimitError):
+            return ERROR_MSG_RATE_LIMIT
+        elif isinstance(error, AuthenticationError):
+            return ERROR_MSG_AUTH_FAILED
+        elif isinstance(error, APIConnectionError):
+            return ERROR_MSG_CONNECTION_FAILED
+        elif isinstance(error, ValueError):
+            return ERROR_MSG_VALIDATION_FAILED
+        elif isinstance(error, RuntimeError):
+            return ERROR_MSG_RESOURCE_EXHAUSTED
+        else:
+            return ERROR_MSG_UNKNOWN_ERROR
+    
+    def get_error_stats(self) -> Dict[str, int]:
+        """获取错误统计信息"""
+        return self.error_counts.copy()
+     
+    async def start(self) -> None:
+        """启动机器人"""
+        if self.running:
+            logger.warning("机器人已经在运行中")
+            return
+            
+        logger.info("正在启动机器人...")
+        self.running = True
+        
+        # 重置每日发帖计数的任务
+        self.scheduler.add_job(
+            self._reset_daily_post_count,
+            "cron",
+            hour=0,
+            minute=0,
+            second=0,
+        )
+        
+        # 如果启用了自动发帖，添加定时任务
+        if self.config.get("bot.auto_post.enabled", False):
+            interval_minutes = self.config.get("bot.auto_post.interval_minutes", 60)
+            logger.info(f"已启用自动发帖，间隔: {interval_minutes}分钟")
+            
+            self.scheduler.add_job(
+                self._auto_post,
+                "interval",
+                minutes=interval_minutes,
+                next_run_time=datetime.now() + timedelta(minutes=1),  # 启动后1分钟开始第一次发帖
+            )
+        
+        # 启动调度器
+        self.scheduler.start()
+        
+        # 启动WebSocket连接，监听实时事件
+        websocket_task = asyncio.create_task(self._start_websocket())
+        self.tasks.append(websocket_task)
+        
+        # 启动轮询任务，处理提及和消息
+        polling_task = asyncio.create_task(self._poll_mentions())
+        self.tasks.append(polling_task)
+        
+        logger.info("机器人已启动")
+    
+    async def stop(self) -> None:
+        """停止机器人"""
+        if not self.running:
+            logger.warning("机器人已经停止")
+            return
+            
+        logger.info("正在停止机器人...")
+        self.running = False
+        
+        try:
+            # 停止调度器
+            self.scheduler.shutdown()
+            
+            # 取消所有任务
+            for task in self.tasks:
+                if not task.done():
+                    task.cancel()
+            
+            # 等待任务完成
+            if self.tasks:
+                await asyncio.gather(*self.tasks, return_exceptions=True)
+            self.tasks = []
+            
+            # 关闭API客户端
+            await self.misskey.close()
+            
+        except Exception as e:
+            logger.error(f"停止机器人时出错: {e}")
+        finally:
+            # 标记已清理，避免重复清理
+            self._cleanup_needed = False
+            logger.info("机器人已停止")
+    
+    async def _start_websocket(self) -> None:
+        """启动WebSocket连接，监听实时事件"""
+        retry_count = 0
+        max_retries = 10
+        base_delay = 5
+        
+        while self.running:
+            try:
+                await self.misskey.connect_websocket(self._handle_websocket_message)
+                # 连接成功，重置重试计数
+                retry_count = 0
+            except asyncio.CancelledError:
+                # 任务被取消，退出循环
+                break
+            except (ConnectionError, OSError, TimeoutError) as e:
+                if not self.running:
+                    break
+                    
+                retry_count += 1
+                # 计算指数退避延迟，最大为5分钟
+                delay = min(base_delay * (2 ** (retry_count - 1)), 300)
+                
+                logger.error(f"WebSocket网络连接错误: {e}")
+                logger.info(f"将在{delay}秒后重新连接WebSocket... (尝试 {retry_count}/{max_retries})")
+                
+                # 如果超过最大重试次数，记录错误并重置计数
+                if retry_count >= max_retries:
+                    logger.error(f"WebSocket连接失败次数过多，将重置重试计数")
+                    retry_count = 0
+                
+                try:
+                    await asyncio.sleep(delay)
+                except asyncio.CancelledError:
+                    break
+            except (ValueError, TypeError, KeyError) as e:
+                logger.error(f"WebSocket数据格式错误: {e}")
+                # 数据格式错误不需要重试，直接继续
+                continue
+            except Exception as e:
+                if not self.running:
+                    break
+                    
+                retry_count += 1
+                delay = min(base_delay * (2 ** (retry_count - 1)), 300)
+                
+                logger.error(f"WebSocket未知错误: {e}")
+                logger.info(f"将在{delay}秒后重新连接WebSocket... (尝试 {retry_count}/{max_retries})")
+                
+                if retry_count >= max_retries:
+                    logger.error(f"WebSocket连接失败次数过多，将重置重试计数")
+                    retry_count = 0
+                
+                try:
+                    await asyncio.sleep(delay)
+                except asyncio.CancelledError:
+                    break
+    
+    async def _handle_websocket_message(self, data: Dict[str, Any]) -> None:
+        """处理WebSocket消息
+        
+        Args:
+            data: WebSocket消息数据
+        """
+        try:
+            if data.get("type") != "channel":
+                return
+            
+            body = data.get("body", {})
+            if not body:
+                return
+            
+            # 处理提及
+            if body.get("type") == "mention" and self.config.get("bot.response.mention_enabled", True):
+                note = body.get("body", {})
+                if note and note.get("id") not in self.processed_mentions:
+                    await self._handle_mention(note)
+            
+            # 处理聊天消息
+            elif body.get("type") == "messaging_message" and self.config.get("bot.response.chat_enabled", True):
+                message = body.get("body", {})
+                if message and message.get("id") not in self.processed_messages:
+                    await self._handle_message(message)
+                    
+        except Exception as e:
+            logger.error(f"处理WebSocket消息时出错: {e}")
+    
+    async def _poll_mentions(self) -> None:
+        """轮询提及和消息"""
+        retry_count = 0
+        max_retries = 5
+        base_delay = DEFAULT_POLLING_INTERVAL
+        
+        while self.running:
+            try:
+                # 处理提及
+                if self.config.get("bot.response.mention_enabled", True):
+                    mentions = await self.misskey.get_mentions(limit=10)
+                    for mention in mentions:
+                        if mention["id"] not in self.processed_mentions:
+                            await self._handle_mention(mention)
+                
+                # 重置重试计数
+                retry_count = 0
+                
+                # 等待一段时间再次轮询
+                try:
+                    await asyncio.sleep(base_delay)  # 每分钟轮询一次
+                except asyncio.CancelledError:
+                    break
+                    
+            except asyncio.CancelledError:
+                break
+            except (APIRateLimitError, APIConnectionError) as e:
+                if not self.running:
+                    break
+                    
+                retry_count += 1
+                # API错误使用更长的延迟
+                delay = min(base_delay * (3 ** (retry_count - 1)), 1800)  # 最大30分钟
+                
+                logger.error(f"轮询API错误: {e}")
+                logger.info(f"将在{delay}秒后重试... (尝试 {retry_count}/{max_retries})")
+                
+                if retry_count >= max_retries:
+                    logger.error(f"轮询API失败次数过多，将重置重试计数")
+                    retry_count = 0
+                
+                try:
+                    await asyncio.sleep(delay)
+                except asyncio.CancelledError:
+                    break
+            except (ConnectionError, TimeoutError) as e:
+                if not self.running:
+                    break
+                    
+                retry_count += 1
+                delay = min(base_delay * (2 ** (retry_count - 1)), 900)
+                
+                logger.error(f"轮询网络错误: {e}")
+                logger.info(f"将在{delay}秒后重试... (尝试 {retry_count}/{max_retries})")
+                
+                if retry_count >= max_retries:
+                    logger.error(f"轮询网络失败次数过多，将重置重试计数")
+                    retry_count = 0
+                
+                try:
+                    await asyncio.sleep(delay)
+                except asyncio.CancelledError:
+                    break
+            except Exception as e:
+                if not self.running:
+                    break
+                    
+                retry_count += 1
+                delay = min(base_delay * (2 ** (retry_count - 1)), 900)
+                
+                logger.error(f"轮询未知错误: {e}")
+                logger.info(f"将在{delay}秒后重试... (尝试 {retry_count}/{max_retries})")
+                
+                if retry_count >= max_retries:
+                    logger.error(f"轮询失败次数过多，将重置重试计数")
+                    retry_count = 0
+                
+                try:
+                    await asyncio.sleep(delay)
+                except asyncio.CancelledError:
+                    break
+    
+    async def _handle_mention(self, note: Dict[str, Any]) -> None:
+        """处理提及
+        
+        Args:
+            note: 提及的笔记数据
+        """
+        note_id = note.get("id")
+        if not note_id or note_id in self.processed_mentions:
+            return
+        
+        # 标记为已处理
+        self.processed_mentions.append(note_id)
+        
+        try:
+            # 输入验证
+            if not isinstance(note, dict):
+                raise ValueError("提及数据必须是字典格式")
+            
+            required_fields = ["user", "id", "text"]
+            for field in required_fields:
+                if field not in note:
+                    raise ValueError(f"提及数据缺少必要字段: {field}")
+            
+            # 获取笔记内容和用户信息
+            text = note.get("text", "")
+            user = note.get("user", {})
+            username = user.get("username", "用户")
+            
+            logger.info(f"收到来自 {username} 的提及: {text}")
+            
+            try:
+                # 生成回复
+                reply = await self.deepseek.generate_reply(text, self.system_prompt, username)
+            except (APIRateLimitError, APIConnectionError, AuthenticationError) as e:
+                self._handle_error(e, "生成回复时")
+                # 发送简化的错误回复
+                error_message = "抱歉，AI服务暂时不可用，请稍后再试。"
+                if isinstance(e, APIRateLimitError):
+                    error_message = "抱歉，请求过于频繁，请稍后再试。"
+                elif isinstance(e, AuthenticationError):
+                    error_message = "抱歉，服务配置有误，请联系管理员。"
+                
+                await self._send_error_reply(username, note_id, error_message)
+                return
+            
+            # 限制回复长度
+            max_length = self.config.get("bot.response.max_response_length", 500)
+            if len(reply) > max_length:
+                reply = reply[:max_length-3] + "..."
+            
+            try:
+                # 发送回复
+                await self.misskey.create_note(reply, reply_id=note_id)
+                logger.info(f"已回复提及: {reply[:50]}...")
+            except (APIRateLimitError, APIConnectionError, AuthenticationError) as e:
+                self._handle_error(e, "发送回复时")
+                await self._send_error_reply(username, note_id, "抱歉，回复发送失败，请稍后再试。")
+            
+        except ValueError as e:
+            logger.error(f"输入验证错误: {e}")
+            self._handle_error(e, "处理提及时")
+        except Exception as e:
+            logger.error(f"处理提及时出错: {e}")
+            self._handle_error(e, "处理提及时")
+            # 尝试发送通用错误回复
+            try:
+                username = note.get("user", {}).get("username", "用户")
+                if username and note_id:
+                    await self._send_error_reply(username, note_id, "抱歉，处理您的消息时出现了错误。")
+            except Exception as reply_error:
+                logger.error(f"发送错误回复失败: {reply_error}")
+    
+    async def _send_error_reply(self, username: str, note_id: str, message: str) -> None:
+        """发送错误回复"""
+        try:
+            # 限制错误消息长度
+            if len(message) > DEFAULT_ERROR_REPLY_MAX_LENGTH:
+                message = message[:DEFAULT_ERROR_REPLY_MAX_LENGTH-3] + "..."
+            
+            await self.misskey.create_note(
+                text=f"@{username} {message}",
+                reply_id=note_id
+            )
+        except Exception as e:
+            logger.error(f"发送错误回复失败: {e}")
+    
+    async def _handle_message(self, message: Dict[str, Any]) -> None:
+        """处理聊天消息
+        
+        Args:
+            message: 聊天消息数据
+        """
+        message_id = message.get("id")
+        if not message_id or message_id in self.processed_messages:
+            return
+        
+        # 标记为已处理
+        self.processed_messages.append(message_id)
+        
+        try:
+            # 获取消息内容和用户信息
+            text = message.get("text", "")
+            user_id = message.get("userId")
+            
+            if not user_id or not text:
+                return
+            
+            logger.info(f"收到来自用户 {user_id} 的消息: {text}")
+            
+            # 获取聊天历史
+            chat_history = await self._get_chat_history(user_id)
+            
+            # 添加当前消息到历史
+            chat_history.append({"role": "user", "content": text})
+            
+            # 生成回复
+            reply = await self.deepseek.generate_chat_response(chat_history, self.system_prompt)
+            
+            # 限制回复长度
+            max_length = self.config.get("bot.response.max_response_length", 500)
+            if len(reply) > max_length:
+                reply = reply[:max_length-3] + "..."
+            
+            # 发送回复
+            await self.misskey.send_message(user_id, reply)
+            logger.info(f"已回复消息: {reply[:50]}...")
+            
+            # 更新聊天历史
+            chat_history.append({"role": "assistant", "content": reply})
+            
+        except Exception as e:
+            logger.error(f"处理消息时出错: {e}")
+    
+    async def _get_chat_history(self, user_id: str, limit: int = 5) -> List[Dict[str, str]]:
+        """获取聊天历史
+        
+        Args:
+            user_id: 用户ID
+            limit: 历史消息数量限制
+            
+        Returns:
+            聊天历史列表
+        """
+        try:
+            # 获取最近的消息
+            messages = await self.misskey.get_messages(user_id, limit=limit)
+            
+            # 转换为聊天历史格式
+            chat_history = []
+            for msg in reversed(messages):  # 从旧到新排序
+                if msg.get("userId") == user_id:
+                    chat_history.append({"role": "user", "content": msg.get("text", "")})
+                else:
+                    chat_history.append({"role": "assistant", "content": msg.get("text", "")})
+            
+            return chat_history
+            
+        except Exception as e:
+            logger.error(f"获取聊天历史时出错: {e}")
+            return []  # 出错时返回空历史
+    
+    async def _auto_post(self) -> None:
+        """自动发帖"""
+        if not self.running:
+            return
+            
+        try:
+            # 检查今日发帖数量是否超过限制
+            current_date = datetime.now().date()
+            if current_date != self.today:
+                self._reset_daily_post_count()
+            
+            max_posts = self.config.get("bot.auto_post.max_posts_per_day", 10)
+            if self.posts_today >= max_posts:
+                logger.info(f"今日发帖数量已达上限 ({max_posts})，跳过自动发帖")
+                return
+            
+            # 获取自动发帖提示词
+            post_prompt = self.config.get("bot.auto_post.prompt", "请生成一篇有趣、有见解的社交媒体帖子。")
+            
+            # 生成帖子内容
+            post_content = await self.deepseek.generate_post(self.system_prompt, prompt=post_prompt)
+            
+            # 限制帖子长度
+            max_length = self.config.get("bot.auto_post.max_post_length", 500)
+            if len(post_content) > max_length:
+                post_content = post_content[:max_length-3] + "..."
+                logger.info(f"帖子内容已截断至{max_length}字符")
+            
+            # 发布帖子
+            await self.misskey.create_note(post_content)
+            
+            # 更新计数器
+            self.posts_today += 1
+            self.last_auto_post_time = datetime.now()
+            
+            logger.info(f"已自动发帖: {post_content[:50]}...")
+            
+        except Exception as e:
+            logger.error(f"自动发帖时出错: {e}")
+    
+    def _reset_daily_post_count(self) -> None:
+        """重置每日发帖计数"""
+        self.posts_today = 0
+        self.today = datetime.now().date()
+        logger.info("已重置每日发帖计数")

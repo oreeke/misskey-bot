@@ -1,0 +1,68 @@
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# IDE files
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+
+# Project specific files
+# Configuration files (keep example files)
+config.yaml
+!config.yaml.example
+
+# Log files
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# OS generated files
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+._*
+
+# Linux
+*~
+.directory
+
+# Docker
+.dockerignore
+
+# Security
+*.pem
+*.key
+*.crt
