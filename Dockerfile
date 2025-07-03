@@ -1,39 +1,41 @@
-# 使用Python 3.11作为基础镜像
-FROM python:3.11-slim
+FROM python:3.11-slim as builder
 
-# 设置工作目录
-WORKDIR /app
+WORKDIR /build
 
-# 设置Python环境变量
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONIOENCODING=utf-8
-
-# 安装系统依赖
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc && \
+    python -m venv /opt/venv && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# 首先复制依赖文件，利用Docker缓存
-COPY requirements.txt /app/
+ENV PATH="/opt/venv/bin:$PATH"
 
-# 安装Python依赖
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# 复制项目文件
-COPY . /app/
+FROM python:3.11-slim as runtime
 
-# 创建日志目录
-RUN mkdir -p /app/logs && chmod -R 755 /app/logs
+WORKDIR /app
 
-# 设置时区
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=utf-8 \
+    PATH="/opt/venv/bin:$PATH" \
+    TZ=Asia/Shanghai
 
-# 健康检查
-HEALTHCHECK --interval=60s --timeout=10s --retries=3 \
-  CMD python -c "import os; exit(0 if os.path.exists('/app/logs/bot.log') else 1)"
+RUN groupadd -r botuser && useradd -r -g botuser botuser && \
+    mkdir -p /app/logs && \
+    chown -R botuser:botuser /app && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
 
-# 运行机器人
+COPY --from=builder /opt/venv /opt/venv
+COPY --chown=botuser:botuser . /app/
+
+USER botuser
+
+HEALTHCHECK --interval=60s --timeout=10s --retries=3 --start-period=30s \
+  CMD python -c "from src.utils import health_check; exit(0 if health_check() else 1)"
+
 CMD ["python", "run.py"]
