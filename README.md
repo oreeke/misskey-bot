@@ -1,10 +1,10 @@
 # Misskey Bot
 
-一个基于 Python 的 Misskey 机器人，使用 DeepSeek 生成帖子或聊天。
+一只由 Python 实现的 Misskey 机器人，使用 DeepSeek 生成帖子或与用户聊天。
 
 ## 配置
 
-可以通过以下两种方式配置机器人：
+选择其中一种方式配置机器人：
 
 ### 1. 配置文件 (config.yaml)
 
@@ -31,7 +31,7 @@ bot:
     max_response_length: 500                        # 最大响应长度（字符数）
   
   visibility:
-    default: "public"                               # 默认笔记可见性（public/home/followers/specified）
+    default: "public"                               # 默认帖子可见性（public/home/followers/specified）
   
 system_prompt: |
   你是一个友好的AI助手，运行在Misskey平台上。
@@ -55,7 +55,7 @@ BOT_AUTO_POST_PROMPT=请生成一篇有趣、有见解的社交媒体帖子。  
 BOT_RESPONSE_MENTION_ENABLED=true                          # 是否响应提及（@）
 BOT_RESPONSE_CHAT_ENABLED=true                             # 是否响应聊天消息
 BOT_RESPONSE_MAX_LENGTH=500                                # 最大响应长度（字符数）
-BOT_DEFAULT_VISIBILITY=public                              # 默认笔记可见性（public/home/followers/specified）
+BOT_DEFAULT_VISIBILITY=public                              # 默认帖子可见性（public/home/followers/specified）
 SYSTEM_PROMPT=你是一个友好的AI助手，运行在Misskey平台上。请用简短、友好的方式回答问题。避免使用过于复杂的术语，保持回答简洁明了。如果不确定答案，请诚实地表明你不知道，而不是猜测。
 ```
 

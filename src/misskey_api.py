@@ -277,15 +277,15 @@ class MisskeyAPI:
         return await self._make_request(endpoint, data)
     
     async def create_note(self, text: str, visibility: Optional[str] = None, reply_id: Optional[str] = None) -> Dict[str, Any]:
-        """创建笔记（发帖）
+        """创建帖子（发帖）
         
         Args:
-            text: 笔记内容
+            text: 帖子内容
             visibility: 可见性，可选值: public, home, followers, specified。如果为None，则使用配置中的默认值
-            reply_id: 回复的笔记ID
+            reply_id: 回复的帖子ID
             
         Returns:
-            创建的笔记信息
+            创建的帖子信息
         """
         # 如果没有指定可见性，则从配置中获取默认值
         if visibility is None:
@@ -323,13 +323,13 @@ class MisskeyAPI:
         return await self._make_request("notes/mentions", data)
     
     async def get_note(self, note_id: str) -> Dict[str, Any]:
-        """获取笔记信息
+        """获取帖子信息
         
         Args:
-            note_id: 笔记ID
+            note_id: 帖子ID
             
         Returns:
-            笔记信息
+            帖子信息
         """
         data = {
             "noteId": note_id,

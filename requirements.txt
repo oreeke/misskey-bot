@@ -1,19 +1,9 @@
-# Misskey Bot 依赖
-# HTTP请求
 requests>=2.28.0,<3.0.0
-# 异步支持
 aiohttp>=3.8.3,<4.0.0
-# WebSocket支持
 websockets>=11.0,<13.0
-# 配置文件解析
 pyyaml>=6.0,<7.0
-# 日志记录
 loguru>=0.6.0,<1.0.0
-# 环境变量管理
 python-dotenv>=0.21.0,<2.0.0
-# 任务调度
 apscheduler>=3.9.1,<4.0.0
-# 系统资源监控
 psutil>=5.9.0,<7.0.0
-# DeepSeek API客户端 (使用OpenAI兼容接口)
 openai>=1.93.0,<2.0.0

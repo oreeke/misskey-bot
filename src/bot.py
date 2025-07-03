@@ -424,7 +424,7 @@ class MisskeyBot:
         """处理提及
         
         Args:
-            note: 提及的笔记数据
+            note: 提及的帖子数据
         """
         note_id = note.get("id")
         if not note_id or note_id in self.processed_mentions:
@@ -443,7 +443,7 @@ class MisskeyBot:
                 if field not in note:
                     raise ValueError(f"提及数据缺少必要字段: {field}")
             
-            # 获取笔记内容和用户信息
+            # 获取帖子内容和用户信息
             text = note.get("text", "")
             user = note.get("user", {})
             username = user.get("username", "用户")

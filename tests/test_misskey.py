@@ -86,13 +86,13 @@ async def test_misskey_api():
         
         logger.info("API连接成功!")
         
-        # 测试发送一条测试笔记
-        post = input("\n是否发送测试笔记? (y/n): ")
+        # 测试发送一条测试帖子
+        post = input("\n是否发送测试帖子? (y/n): ")
         if post.lower() == "y":
-            note_text = "这是一条测试笔记，来自Misskey Bot测试脚本。"
-            logger.info(f"发送笔记: {note_text}")
+            note_text = "这是一条测试帖子，来自Misskey Bot测试脚本。"
+            logger.info(f"发送帖子: {note_text}")
             result = await misskey.create_note(note_text)
-            logger.info("笔记已发送!")
+            logger.info("帖子已发送!")
         
         return True
     except Exception as e:

@@ -141,7 +141,7 @@ class Config:
                 "max_response_length"
             ] = int(os.environ.get("BOT_RESPONSE_MAX_LENGTH", "500"))
         
-        # 笔记可见性配置
+        # 帖子可见性配置
         if os.environ.get("BOT_DEFAULT_VISIBILITY"):
             self.config.setdefault("bot", {}).setdefault("visibility", {})[
                 "default"

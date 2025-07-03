@@ -24,7 +24,7 @@ bot:
     max_response_length: 500                        # 最大响应长度（字符数）
   
   visibility:
-    default: "public"                               # 默认笔记可见性（public/home/followers/specified）
+    default: "public"                               # 默认帖子可见性（public/home/followers/specified）
   
 system_prompt: |
   你是一个友好的AI助手，运行在Misskey平台上。
