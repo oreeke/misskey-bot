@@ -1,50 +1,63 @@
 # Misskey Bot
 
-一个基于 Python 的 Misskey 机器人。
-
-## 功能
-
-- 连接 Misskey API 自动发帖
-- 响应其他用户的 @ 操作
-- 响应聊天请求
-- 使用 DeepSeek API 生成帖子和聊天内容
+一个基于 Python 的 Misskey 机器人，使用 DeepSeek 生成帖子或聊天。
 
 ## 配置
 
 可以通过以下两种方式配置机器人：
 
-### 1. 配置文件
+### 1. 配置文件 (config.yaml)
 
-在 `config.yaml` 文件中配置以下内容：
+```yaml
+misskey:
+  instance_url: "https://misskey.example.com"       # Misskey 实例 URL
+  access_token: "your_access_token_here"            # Misskey 访问令牌
 
-- Misskey API 连接信息（实例 URL 和访问令牌）
-- DeepSeek API 密钥和模型名称
-- 自动发帖设置（启用状态、发帖间隔、每日最大发帖数量、最大发帖长度）
-- 响应设置（是否响应提及和聊天、最大响应长度）
-- 笔记可见性设置（默认笔记可见性）
-- 系统提示词
+deepseek:
+  api_key: "your_deepseek_api_key_here"             # DeepSeek API 密钥
+  model: "deepseek-chat"                            # 使用的模型名称
 
-参考 `config.yaml.example` 文件了解完整配置选项。
+bot:
+  auto_post:
+    enabled: true                                   # 是否启用自动发帖
+    interval_minutes: 60                            # 发帖间隔（分钟）
+    max_posts_per_day: 10                           # 每日最大发帖数量
+    max_post_length: 500                            # 最大发帖长度（字符数）
+    prompt: "请生成一篇有趣、有见解的社交媒体帖子。"    # 自动发帖提示词
+  
+  response:
+    mention_enabled: true                           # 是否响应提及（@）
+    chat_enabled: true                              # 是否响应聊天消息
+    max_response_length: 500                        # 最大响应长度（字符数）
+  
+  visibility:
+    default: "public"                               # 默认笔记可见性（public/home/followers/specified）
+  
+system_prompt: |
+  你是一个友好的AI助手，运行在Misskey平台上。
+  请用简短、友好的方式回答问题。
+  避免使用过于复杂的术语，保持回答简洁明了。
+  如果不确定答案，请诚实地表明你不知道，而不是猜测。
+```
 
-### 2. 环境变量
+### 2. 环境变量 (.env)
 
-也可以使用 Docker 环境变量配置机器人：
-
-- `MISSKEY_INSTANCE_URL`: Misskey 实例 URL
-- `MISSKEY_ACCESS_TOKEN`: Misskey 访问令牌
-- `DEEPSEEK_API_KEY`: DeepSeek API 密钥
-- `DEEPSEEK_MODEL`: DeepSeek 模型名称
-- `BOT_AUTO_POST_ENABLED`: 是否启用自动发帖
-- `BOT_AUTO_POST_INTERVAL`: 发帖间隔（分钟）
-- `BOT_AUTO_POST_MAX_PER_DAY`: 每日最大发帖数量
-- `BOT_AUTO_POST_MAX_LENGTH`: 最大发帖长度（字符数）
-- `BOT_RESPONSE_MENTION_ENABLED`: 是否响应提及
-- `BOT_RESPONSE_CHAT_ENABLED`: 是否响应聊天
-- `BOT_RESPONSE_MAX_LENGTH`: 最大响应长度
-- `BOT_DEFAULT_VISIBILITY`: 默认笔记可见性（public/home/followers/specified）
-- `SYSTEM_PROMPT`: 系统提示词
-
-参考 `.env.example` 文件了解完整环境变量选项。
+```bash
+MISSKEY_INSTANCE_URL=https://misskey.example.com           # Misskey 实例 URL
+MISSKEY_ACCESS_TOKEN=your_access_token_here                # Misskey 访问令牌
+DEEPSEEK_API_KEY=your_deepseek_api_key_here                # DeepSeek API 密钥
+DEEPSEEK_MODEL=deepseek-chat                               # 使用的模型名称
+BOT_AUTO_POST_ENABLED=true                                 # 是否启用自动发帖
+BOT_AUTO_POST_INTERVAL=60                                  # 发帖间隔（分钟）
+BOT_AUTO_POST_MAX_PER_DAY=10                               # 每日最大发帖数量
+BOT_AUTO_POST_MAX_LENGTH=500                               # 最大发帖长度（字符数）
+BOT_AUTO_POST_PROMPT=请生成一篇有趣、有见解的社交媒体帖子。    # 自动发帖提示词
+BOT_RESPONSE_MENTION_ENABLED=true                          # 是否响应提及（@）
+BOT_RESPONSE_CHAT_ENABLED=true                             # 是否响应聊天消息
+BOT_RESPONSE_MAX_LENGTH=500                                # 最大响应长度（字符数）
+BOT_DEFAULT_VISIBILITY=public                              # 默认笔记可见性（public/home/followers/specified）
+SYSTEM_PROMPT=你是一个友好的AI助手，运行在Misskey平台上。请用简短、友好的方式回答问题。避免使用过于复杂的术语，保持回答简洁明了。如果不确定答案，请诚实地表明你不知道，而不是猜测。
+```
 
 ## 部署
 
@@ -91,7 +104,3 @@ python -m tests.test_misskey
 # 测试 DeepSeek API 连接
 python -m tests.test_deepseek
 ```
-
-## 许可证
-
-MIT

@@ -1,54 +1,31 @@
 # Misskey Bot 配置文件示例
 # 复制此文件为 config.yaml 并填写你的配置
 
-# Misskey API 配置
 misskey:
-  # Misskey 实例 URL
-  instance_url: "https://misskey.example.com"
-  # Misskey 访问令牌
-  access_token: "your_access_token_here"
+  instance_url: "https://misskey.example.com"       # Misskey 实例 URL
+  access_token: "your_access_token_here"            # Misskey 访问令牌
 
-# DeepSeek API 配置
 deepseek:
-  # DeepSeek API 密钥
-  api_key: "your_deepseek_api_key_here"
-  # 使用的模型名称
-  model: "deepseek-chat"
+  api_key: "your_deepseek_api_key_here"             # DeepSeek API 密钥
+  model: "deepseek-chat"                            # 使用的模型名称
 
-# 机器人配置
 bot:
   # 自动发帖配置
   auto_post:
-    # 是否启用自动发帖
-    enabled: true
-    # 发帖间隔（分钟）
-    interval_minutes: 60
-    # 每日最大发帖数量
-    max_posts_per_day: 10
-    # 最大发帖长度（字符数）
-    max_post_length: 500
-    # 自动发帖提示词
-    prompt: "请生成一篇有趣、有见解的社交媒体帖子。"
+    enabled: true                                   # 是否启用自动发帖
+    interval_minutes: 60                            # 发帖间隔（分钟）
+    max_posts_per_day: 10                           # 每日最大发帖数量
+    max_post_length: 500                            # 最大发帖长度（字符数）
+    prompt: "请生成一篇有趣、有见解的社交媒体帖子。"    # 自动发帖提示词
   
-  # 响应配置
   response:
-    # 是否响应提及（@）
-    mention_enabled: true
-    # 是否响应聊天消息
-    chat_enabled: true
-    # 最大响应长度（字符数）
-    max_response_length: 500
+    mention_enabled: true                           # 是否响应提及（@）
+    chat_enabled: true                              # 是否响应聊天消息
+    max_response_length: 500                        # 最大响应长度（字符数）
   
-  # 笔记可见性配置
   visibility:
-    # 默认笔记可见性
-    # 可选值: public（公开）, home（主页）, followers（仅关注者）, specified（指定用户）
-    default: "public"
+    default: "public"                               # 默认笔记可见性（public/home/followers/specified）
   
-
-
-# 系统提示词
-# 用于指导AI生成内容的风格和行为
 system_prompt: |
   你是一个友好的AI助手，运行在Misskey平台上。
   请用简短、友好的方式回答问题。

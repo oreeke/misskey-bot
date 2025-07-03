@@ -20,10 +20,15 @@ services:
       # - BOT_AUTO_POST_ENABLED=true
       # - BOT_AUTO_POST_INTERVAL=60
       # - BOT_AUTO_POST_MAX_PER_DAY=10
+      # - BOT_AUTO_POST_MAX_LENGTH=500
+      # - BOT_AUTO_POST_PROMPT=请生成一篇有趣、有见解的社交媒体帖子。
       # - BOT_RESPONSE_MENTION_ENABLED=true
       # - BOT_RESPONSE_CHAT_ENABLED=true
       # - BOT_RESPONSE_MAX_LENGTH=500
-      # 内存监控已移除，改为自动管理
+      # - BOT_DEFAULT_VISIBILITY=public
+      # - SYSTEM_PROMPT=你是一个友好的AI助手，运行在Misskey平台上。请用简短、友好的方式回答问题。避免使用过于复杂的术语，保持回答简洁明了。如果不确定答案，请诚实地表明你不知道，而不是猜测。
+      # - CONFIG_PATH=config.yaml
+
     healthcheck:
       test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/app/logs/bot.log') else 1)"]
       interval: 1m
