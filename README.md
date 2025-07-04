@@ -61,26 +61,35 @@ SYSTEM_PROMPT=你是一个友好的AI助手，运行在Misskey平台上。请用
 
 ## 部署
 
-### Docker 部署
+### 克隆项目
 
 ```bash
-# 复制环境变量示例文件并修改
-cp .env.example .env
-# 编辑 .env 文件，填入你的配置
+git clone https://github.com/oreeke/misskey-bot.git
+cd misskey-bot
+```
 
-# 构建 Docker 镜像
-docker build -t misskey-bot .
+### Docker Compose
 
-# 运行 Docker 容器
-docker run -d --name misskey-bot --env-file .env misskey-bot
+```bash
+# 编辑 docker-compose.yml 修改环境变量：
+# - MISSKEY_INSTANCE_URL: 你的 Misskey 实例 URL
+# - MISSKEY_ACCESS_TOKEN: 你的 Misskey 访问令牌
+# - DEEPSEEK_API_KEY: 你的 DeepSeek API 密钥
+# - 其他根据需要调整
+
+# 构建镜像
+docker compose build
+
+# 启动容器
+docker compose up -d
 ```
 
 ### 本地部署
 
 ```bash
-# 复制配置文件示例并修改
+# 复制示例文件
 cp config.yaml.example config.yaml
-# 编辑 config.yaml 文件，填入你的配置
+# 编辑 config.yaml ，填入你的配置
 
 # 安装依赖
 pip install -r requirements.txt

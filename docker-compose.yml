@@ -4,22 +4,28 @@ services:
     container_name: misskey-bot
     restart: unless-stopped
     
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-    
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
+      # - ./config.yaml:/app/config.yaml:ro
       - ./logs:/app/logs
     
     environment:
-      - TZ=Asia/Shanghai
-      - PYTHONUNBUFFERED=1
+      - MISSKEY_INSTANCE_URL=https://misskey.example.com
+      - MISSKEY_ACCESS_TOKEN=your_access_token_here
+      - DEEPSEEK_API_KEY=your_deepseek_api_key_here
+      - DEEPSEEK_MODEL=deepseek-chat
+      - BOT_AUTO_POST_ENABLED=true
+      - BOT_AUTO_POST_INTERVAL=60
+      - BOT_AUTO_POST_MAX_PER_DAY=10
+      - BOT_AUTO_POST_MAX_LENGTH=500
+      - BOT_AUTO_POST_PROMPT=请生成一篇有趣、有见解的社交媒体帖子。
+      - BOT_RESPONSE_MENTION_ENABLED=true
+      - BOT_RESPONSE_CHAT_ENABLED=true
+      - BOT_RESPONSE_MAX_LENGTH=500
+      - BOT_DEFAULT_VISIBILITY=public
+      - SYSTEM_PROMPT=你是一个友好的AI助手，运行在Misskey平台上。请用简短、友好的方式回答问题。避免使用过于复杂的术语，保持回答简洁明了。如果不确定答案，请诚实地表明你不知道，而不是猜测。
     
-    env_file:
-      - .env
+    # env_file:
+    #   - .env
     
     healthcheck:
       test: ["CMD", "python", "-c", "from src.utils import health_check; exit(0 if health_check() else 1)"]
