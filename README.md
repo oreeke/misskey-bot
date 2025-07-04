@@ -1,14 +1,19 @@
 # Misskey Bot
 
-一只由 Python 实现的 Misskey 机器人，使用 DeepSeek 生成帖子或与用户聊天。
+> 一只由 Python 实现的 Misskey 机器人，使用 DeepSeek 生成帖子或与用户聊天。
 
-当然也可以通过修改配置中的 `model` 和 `api_base` 选择任何兼容 Openai API 的其他模型。
+> 当然也可以通过修改配置中的 `model` 和 `api_base` 选择任何兼容 Openai API 的其他模型。
+
+---
 
 ## 配置
 
 选择其中一种方式配置机器人：
 
 ### 1. 配置文件 (config.yaml)
+
+<details>
+<summary>点击展开</summary>
 
 ```yaml
 # Misskey 配置
@@ -65,7 +70,12 @@ system_prompt: |
   如果不确定答案，请诚实地表明你不知道，而不是猜测。
 ```
 
+</details>
+
 ### 2. 环境变量 (docker-compose.yaml 或 .env)
+
+<details>
+<summary>点击展开</summary>
 
 ```bash
 # Misskey 配置
@@ -107,6 +117,10 @@ LOG_PATH=logs                                              # 日志文件路径
 SYSTEM_PROMPT=你是一个友好的AI助手，运行在Misskey平台上。请用简短、友好的方式回答问题。避免使用过于复杂的术语，保持回答简洁明了。如果不确定答案，请诚实地表明你不知道，而不是猜测。
 ```
 
+</details>
+
+---
+
 ## 部署
 
 ### 克隆项目
@@ -145,6 +159,8 @@ pip install -r requirements.txt
 # 运行机器人
 python run.py
 ```
+
+---
 
 ## 测试
 
