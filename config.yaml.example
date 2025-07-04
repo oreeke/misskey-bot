@@ -8,6 +8,9 @@ misskey:
 deepseek:
   api_key: "your_deepseek_api_key_here"             # DeepSeek API 密钥
   model: "deepseek-chat"                            # 使用的模型名称
+  api_base: "https://api.deepseek.com/v1"           # DeepSeek API 基础URL
+  max_tokens: 1000                                  # 最大令牌数
+  temperature: 0.7                                  # 温度参数
 
 bot:
   # 自动发帖配置
@@ -25,6 +28,22 @@ bot:
   
   visibility:
     default: "public"                               # 默认帖子可见性（public/home/followers/specified）
+
+# API 配置
+api:
+  timeout: 30                                       # API 请求超时时间（秒）
+  max_retries: 3                                    # 最大重试次数
+  retry_delay: 1.0                                  # 重试延迟（秒）
+
+# 持久化配置
+persistence:
+  db_path: "data/bot_persistence.db"               # SQLite 数据库文件路径
+  cleanup_days: 7                                  # SQLite 数据文件保存天数
+
+# 日志配置
+logging:
+  level: "INFO"                                     # 日志级别 (DEBUG/INFO/WARNING/ERROR)
+  path: "logs"                                      # 日志文件路径
   
 system_prompt: |
   你是一个友好的AI助手，运行在Misskey平台上。

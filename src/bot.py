@@ -9,9 +9,10 @@ Misskey机器人核心模块
 
 import asyncio
 import json
+import logging
 from collections import deque
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Dict, Any, Optional, List
 
 from loguru import logger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -19,6 +20,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from .config import Config
 from .misskey_api import MisskeyAPI
 from .deepseek_api import DeepSeekAPI
+from .persistence import PersistenceManager
 from .exceptions import (
     MisskeyBotError,
     ConfigurationError,
@@ -112,7 +114,11 @@ class MisskeyBot:
             logger.error(f"调度器初始化未知错误: {e}")
             raise ConfigurationError(f"调度器初始化未知错误: {e}")
         
-        # 记录已处理的提及和消息（使用deque提高性能）
+        # 初始化持久化管理器
+        db_path = config.get("persistence.db_path", "data/bot_persistence.db")
+        self.persistence = PersistenceManager(db_path)
+        
+        # 记录已处理的提及和消息（内存缓存，用于快速查询）
         self.processed_mentions: deque = deque(maxlen=MAX_PROCESSED_ITEMS_CACHE)
         self.processed_messages: deque = deque(maxlen=MAX_PROCESSED_ITEMS_CACHE)
         
@@ -141,6 +147,36 @@ class MisskeyBot:
         }
         
         logger.info("Misskey机器人初始化完成")
+    
+    async def _load_recent_processed_items(self) -> None:
+        """加载最近的已处理消息ID到内存缓存"""
+        try:
+            # 加载最近的提及到内存缓存
+            recent_mentions = await self.persistence.get_recent_mentions(MAX_PROCESSED_ITEMS_CACHE)
+            for mention in recent_mentions:
+                self.processed_mentions.append(mention['note_id'])
+            
+            # 加载最近的消息到内存缓存
+            recent_messages = await self.persistence.get_recent_messages(MAX_PROCESSED_ITEMS_CACHE)
+            for message in recent_messages:
+                self.processed_messages.append(message['message_id'])
+                
+            logger.info(f"已加载 {len(recent_mentions)} 个提及和 {len(recent_messages)} 个消息到内存缓存")
+            
+        except Exception as e:
+            logger.warning(f"加载已处理消息ID到缓存时出错: {e}，将从空状态开始")
+    
+    async def _cleanup_old_processed_items(self) -> None:
+        """清理过期的已处理消息ID"""
+        try:
+            cleanup_days = self.config.get("persistence.cleanup_days", 7)
+            deleted_count = await self.persistence.cleanup_old_records(cleanup_days)
+            
+            if deleted_count > 0:
+                logger.info(f"已清理 {deleted_count} 条过期记录")
+                
+        except Exception as e:
+            logger.error(f"清理旧记录时出错: {e}")
      
     def _handle_error(self, error: Exception, context: str = "") -> str:
         """统一处理和统计错误
@@ -185,11 +221,32 @@ class MisskeyBot:
         logger.info("正在启动机器人...")
         self.running = True
         
+        # 加载最近的已处理消息到内存缓存
+        await self._load_recent_processed_items()
+        
         # 重置每日发帖计数的任务
         self.scheduler.add_job(
             self._reset_daily_post_count,
             "cron",
             hour=0,
+            minute=0,
+            second=0,
+        )
+        
+        # 添加定期清理已处理消息的任务（每天凌晨1点）
+        self.scheduler.add_job(
+            lambda: asyncio.create_task(self._cleanup_old_processed_items()),
+            "cron",
+            hour=1,
+            minute=0,
+            second=0,
+        )
+        
+        # 定期数据库维护任务（每天凌晨2点执行）
+        self.scheduler.add_job(
+            lambda: asyncio.create_task(self.persistence.vacuum()),
+            "cron",
+            hour=2,
             minute=0,
             second=0,
         )
@@ -244,6 +301,9 @@ class MisskeyBot:
             
             # 关闭API客户端
             await self.misskey.close()
+            
+            # 关闭持久化管理器
+            await self.persistence.close()
             
         except Exception as e:
             logger.error(f"停止机器人时出错: {e}")
@@ -427,10 +487,15 @@ class MisskeyBot:
             note: 提及的帖子数据
         """
         note_id = note.get("id")
-        if not note_id or note_id in self.processed_mentions:
+        if not note_id:
+            return
+            
+        # 检查是否已经处理过这个提及（先检查内存缓存，再检查数据库）
+        if note_id in self.processed_mentions or await self.persistence.is_mention_processed(note_id):
             return
         
-        # 标记为已处理
+        # 标记为已处理（同时保存到数据库和内存缓存）
+        await self.persistence.mark_mention_processed(note_id)
         self.processed_mentions.append(note_id)
         
         try:
@@ -513,10 +578,15 @@ class MisskeyBot:
             message: 聊天消息数据
         """
         message_id = message.get("id")
-        if not message_id or message_id in self.processed_messages:
+        if not message_id:
+            return
+            
+        # 检查是否已经处理过这个消息（先检查内存缓存，再检查数据库）
+        if message_id in self.processed_messages or await self.persistence.is_message_processed(message_id):
             return
         
-        # 标记为已处理
+        # 标记为已处理（同时保存到数据库和内存缓存）
+        await self.persistence.mark_message_processed(message_id)
         self.processed_messages.append(message_id)
         
         try:

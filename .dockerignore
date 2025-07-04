@@ -53,6 +53,9 @@ config.yaml
 .DS_Store
 Thumbs.db
 
+# SQLite files
+data/
+
 # Security
 *.pem
 *.key

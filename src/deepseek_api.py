@@ -24,6 +24,7 @@ from .exceptions import (
 from .constants import (
     DEFAULT_MAX_RETRIES,
     DEFAULT_RETRY_DELAY,
+    DEFAULT_API_TIMEOUT,
     DEEPSEEK_API_BASE_URL,
     DEFAULT_DEEPSEEK_MODEL,
     DEFAULT_MAX_TOKENS,
@@ -43,14 +44,21 @@ try:
     )
 except ImportError as e:
     logger.error(f"无法导入OpenAI异常类: {e}")
-    # 使用通用异常作为备用
-    RateLimitError = Exception
-    APIError = Exception
-    AuthenticationError = Exception
-    BadRequestError = Exception
-    APITimeoutError = Exception
-    NotFoundError = Exception
-    Timeout = Exception
+    # 使用BaseException子类作为备用
+    class RateLimitError(Exception):
+        pass
+    class APIError(Exception):
+        pass
+    class AuthenticationError(Exception):
+        pass
+    class BadRequestError(Exception):
+        pass
+    class APITimeoutError(Exception):
+        pass
+    class NotFoundError(Exception):
+        pass
+    class Timeout(Exception):
+        pass
 
 
 class DeepSeekAPI:
@@ -96,9 +104,10 @@ class DeepSeekAPI:
         try:
             self.client = openai.OpenAI(
                 api_key=self.api_key,
-                base_url=self.api_base
+                base_url=self.api_base,
+                timeout=DEFAULT_API_TIMEOUT  # 添加超时配置
             )
-            logger.info(f"成功创建OpenAI客户端，base_url={self.api_base}")
+            logger.info(f"成功创建OpenAI客户端，base_url={self.api_base}，超时时间={DEFAULT_API_TIMEOUT}秒")
         except Exception as e:
             logger.error(f"创建OpenAI客户端失败: {e}")
             raise APIConnectionError("DeepSeek", f"客户端初始化失败: {e}")
@@ -116,6 +125,7 @@ class DeepSeekAPI:
         retryable_errors = (
             RateLimitError,
             APITimeoutError,
+            Timeout,
             APIError
         )
         return isinstance(error, retryable_errors)
@@ -169,12 +179,16 @@ class DeepSeekAPI:
             try:
                 logger.info(f"正在调用DeepSeek API生成文本，尝试次数: {attempt + 1}/{self.max_retries}")
                 
-                # 使用新版本OpenAI库的API调用方式
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    max_tokens=max_tokens,
-                    temperature=temperature
+                # 使用新版本OpenAI库的API调用方式，添加asyncio超时保护
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self.client.chat.completions.create,
+                        model=self.model,
+                        messages=messages,
+                        max_tokens=max_tokens,
+                        temperature=temperature
+                    ),
+                    timeout=DEFAULT_API_TIMEOUT
                 )
                 
                 # 提取生成的文本
@@ -201,9 +215,9 @@ class DeepSeekAPI:
                 logger.error(f"API认证错误: {e}")
                 raise CustomAuthError(f"DeepSeek API认证失败: {e}")
                 
-            except (APITimeoutError, APIError) as e:
+            except (APITimeoutError, Timeout, asyncio.TimeoutError, APIError) as e:
                 last_error = e
-                logger.warning(f"API临时错误，尝试 {attempt + 1}/{self.max_retries}: {e}")
+                logger.warning(f"API超时或临时错误，尝试 {attempt + 1}/{self.max_retries}: {e}")
                 if attempt < self.max_retries - 1 and self._is_retryable_error(e):
                     delay = self._calculate_retry_delay(attempt)
                     logger.info(f"等待 {delay:.2f} 秒后重试")
@@ -320,11 +334,15 @@ class DeepSeekAPI:
             try:
                 logger.info(f"正在调用DeepSeek API生成聊天响应，尝试次数: {attempt + 1}/{self.max_retries}")
                 
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    max_tokens=max_tokens,
-                    temperature=temperature
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self.client.chat.completions.create,
+                        model=self.model,
+                        messages=messages,
+                        max_tokens=max_tokens,
+                        temperature=temperature
+                    ),
+                    timeout=DEFAULT_API_TIMEOUT
                 )
                 
                 generated_text = response.choices[0].message.content
@@ -350,9 +368,9 @@ class DeepSeekAPI:
                 logger.error(f"API认证错误: {e}")
                 raise CustomAuthError(f"DeepSeek API认证失败: {e}")
                 
-            except (APITimeoutError, APIError) as e:
+            except (APITimeoutError, Timeout, asyncio.TimeoutError, APIError) as e:
                 last_error = e
-                logger.warning(f"API临时错误，尝试 {attempt + 1}/{self.max_retries}: {e}")
+                logger.warning(f"API超时或临时错误，尝试 {attempt + 1}/{self.max_retries}: {e}")
                 if attempt < self.max_retries - 1 and self._is_retryable_error(e):
                     delay = self._calculate_retry_delay(attempt)
                     logger.info(f"等待 {delay:.2f} 秒后重试")
