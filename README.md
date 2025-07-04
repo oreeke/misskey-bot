@@ -48,7 +48,7 @@ api:
 # 持久化配置
 persistence:
   db_path: "data/bot_persistence.db"                # SQLite 数据库文件路径
-  cleanup_days: 7                                   # 持久化数据保存天数
+  cleanup_days: 7                                   # SQLite 数据保存天数
 
 # 日志配置
 logging:
