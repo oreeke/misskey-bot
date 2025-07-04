@@ -149,9 +149,9 @@ python run.py
 运行机器人之前，先测试 API 连接是否正常：
 
 ```bash
-pytest tests/ -v
-
+# 测试 Misskey API
 python -m tests.test_misskey
 
+# 测试 DeepSeek API
 python -m tests.test_deepseek
 ```
