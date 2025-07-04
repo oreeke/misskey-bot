@@ -71,7 +71,7 @@ cd misskey-bot
 ### Docker Compose
 
 ```bash
-# 编辑 docker-compose.yml 修改环境变量：
+# 编辑 docker-compose.yaml 修改环境变量：
 # - MISSKEY_INSTANCE_URL: 你的 Misskey 实例 URL
 # - MISSKEY_ACCESS_TOKEN: 你的 Misskey 访问令牌
 # - DEEPSEEK_API_KEY: 你的 DeepSeek API 密钥
