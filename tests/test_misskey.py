@@ -31,17 +31,15 @@ logger = logging.getLogger('test_misskey')
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_misskey_api():
     """测试Misskey API"""
-    logger.info("开始测试Misskey API连接")
-    
     # 尝试从配置文件加载
     try:
         config = Config()
         await config.load()
         instance_url = config.get('misskey.instance_url')
         access_token = config.get('misskey.access_token')
-        logger.info("从配置文件加载成功")
     except Exception as e:
         logger.warning(f"从配置文件加载失败: {e}，尝试从环境变量加载")
         # 加载环境变量
@@ -51,29 +49,28 @@ async def test_misskey_api():
         access_token = os.environ.get("MISSKEY_ACCESS_TOKEN")
     
     if not instance_url or not access_token:
-        logger.error("错误: 未设置Misskey实例URL或访问令牌，请检查配置文件或环境变量")
-        return False
+        pytest.skip("Misskey实例URL或访问令牌未配置，跳过API测试")
     
     # 初始化Misskey API客户端
     misskey = MisskeyAPI(instance_url=instance_url, access_token=access_token)
+    assert misskey is not None
     
-    # 测试获取当前用户信息
     try:
-        logger.info("获取当前用户信息...")
+        # 测试获取当前用户信息
         me = await misskey.request("i")
-        logger.info(f"用户名: {me.get('username')}")
-        logger.info(f"显示名称: {me.get('name')}")
-        logger.info(f"描述: {me.get('description')}")
+        assert me is not None
+        assert isinstance(me, dict)
+        assert "id" in me
+        assert "username" in me
         
         # 获取实例信息
-        logger.info("获取实例信息...")
         instance = await misskey.request('meta')
-        logger.info(f"实例名称: {instance.get('name')}")
-        logger.info(f"实例版本: {instance.get('version')}")
+        assert instance is not None
+        assert isinstance(instance, dict)
+        assert "name" in instance
+        assert "version" in instance
         
         # 测试健康检查函数
-        logger.info("执行API健康检查...")
-        # 创建一个健康检查函数
         async def check_misskey_health():
             try:
                 me = await misskey.request("i")
@@ -82,38 +79,14 @@ async def test_misskey_api():
                 return False
         
         health_status = await check_api_health(check_misskey_health, "Misskey")
-        logger.info(f"API健康状态: {health_status}")
+        assert health_status is True
         
-        logger.info("API连接成功!")
-        
-        # 测试发送一条测试帖子
-        post = input("\n是否发送测试帖子? (y/n): ")
-        if post.lower() == "y":
-            note_text = "这是一条测试帖子，来自Misskey Bot测试脚本。"
-            logger.info(f"发送帖子: {note_text}")
-            result = await misskey.create_note(note_text)
-            logger.info("帖子已发送!")
-        
-        return True
-    except Exception as e:
-        logger.error(f"API连接测试失败: {e}")
-        return False
     finally:
         # 关闭API客户端
         await misskey.close()
 
 
-async def main():
-    """主函数"""
-    success = await test_misskey_api()
-    if success:
-        print("\n✅ Misskey API连接测试成功!")
-        return 0
-    else:
-        print("\n❌ Misskey API连接测试失败!")
-        return 1
-
-
-if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    sys.exit(exit_code)
+# 可以通过 pytest 命令运行这个测试:
+# pytest tests/test_misskey.py -v
+# pytest tests/test_misskey.py::test_misskey_api -v
+# pytest tests/test_misskey.py -m "integration" -v  # 运行集成测试

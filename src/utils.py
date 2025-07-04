@@ -108,3 +108,27 @@ async def log_system_info() -> None:
     """记录系统信息"""
     system_info = get_system_info()
     logger.info(f"系统信息: {system_info}")
+
+
+def health_check() -> bool:
+    """健康检查函数"""
+    try:
+        # 检查基本的系统资源
+        memory_usage = get_memory_usage()
+        
+        # 检查内存使用是否过高（超过90%认为不健康）
+        if memory_usage["percent"] > 90:
+            logger.warning(f"内存使用过高: {memory_usage['percent']}%")
+            return False
+            
+        # 检查进程是否存在
+        current_process = psutil.Process(os.getpid())
+        if not current_process.is_running():
+            return False
+            
+        # 基本健康检查通过
+        return True
+        
+    except Exception as e:
+        logger.error(f"健康检查失败: {e}")
+        return False

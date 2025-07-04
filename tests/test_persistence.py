@@ -2,72 +2,79 @@
 # -*- coding: utf-8 -*-
 
 """
-测试持久化功能的脚本
+测试持久化功能
 
-这个脚本用于验证机器人的消息ID持久化功能是否正常工作。
-"""
+这个脚本用于验证机器人的消息ID持久化功能是否正常工作。"""
 
 import asyncio
 import sys
+import tempfile
+import os
 from pathlib import Path
+import pytest
 
 # 确保src目录在Python路径中
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from persistence import PersistenceManager
+from src.persistence import PersistenceManager
 
 
-async def test_persistence():
+@pytest.mark.asyncio
+async def test_persistence_manager():
     """测试SQLite持久化功能"""
-    db_path = "data/bot_persistence.db"
-    
-    print("=== SQLite持久化功能测试 ===")
+    # 使用临时文件避免污染项目目录
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp_file:
+        db_path = tmp_file.name
     
     try:
         # 初始化持久化管理器
         persistence = PersistenceManager(db_path)
-        print(f"✓ 持久化管理器初始化成功: {db_path}")
+        assert persistence is not None
         
-        # 检查数据库文件
-        if Path(db_path).exists():
-            print(f"✓ 数据库文件存在: {db_path}")
-        else:
-            print(f"✓ 数据库文件已创建: {db_path}")
+        # 检查数据库文件是否创建
+        assert Path(db_path).exists()
         
         test_mention_id = "test_mention_123"
         test_message_id = "test_message_456"
         
+        # 测试标记功能
         await persistence.mark_mention_processed(test_mention_id)
         await persistence.mark_message_processed(test_message_id)
-        print("✓ 测试数据已标记为已处理")
         
+        # 测试查询功能
         is_mention_processed = await persistence.is_mention_processed(test_mention_id)
         is_message_processed = await persistence.is_message_processed(test_message_id)
         
-        if is_mention_processed and is_message_processed:
-            print("✓ 查询功能正常")
-        else:
-            print("✗ 查询功能异常")
+        assert is_mention_processed is True
+        assert is_message_processed is True
         
+        # 测试未处理的ID
+        is_new_mention_processed = await persistence.is_mention_processed("new_mention")
+        is_new_message_processed = await persistence.is_message_processed("new_message")
+        
+        assert is_new_mention_processed is False
+        assert is_new_message_processed is False
+        
+        # 测试统计功能
         stats = await persistence.get_stats()
-        print(f"✓ 统计信息: 提及 {stats['mentions_count']} 条，消息 {stats['messages_count']} 条")
+        assert isinstance(stats, dict)
+        assert 'mentions_count' in stats
+        assert 'messages_count' in stats
+        assert stats['mentions_count'] >= 1
+        assert stats['messages_count'] >= 1
         
+        # 测试清理功能
         await persistence.cleanup_old_records(0)
-        print("✓ 测试数据已清理")
         
+        # 关闭连接
         await persistence.close()
-        print("✓ 持久化管理器已关闭")
         
-    except Exception as e:
-        print(f"✗ 测试失败: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    print("\n=== 说明 ===")
-    print("SQLite持久化系统已成功替代JSON文件存储。")
-    print("机器人现在使用数据库来记录已处理的消息，")
-    print("提供更好的性能和可靠性。")
+    finally:
+        # 清理临时文件
+        if os.path.exists(db_path):
+            os.unlink(db_path)
 
 
-if __name__ == "__main__":
-    asyncio.run(test_persistence())
+# 可以通过 pytest 命令运行这个测试:
+# pytest tests/test_persistence.py -v
+# pytest tests/test_persistence.py::test_persistence_manager -v
