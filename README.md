@@ -40,7 +40,7 @@ system_prompt: |
   如果不确定答案，请诚实地表明你不知道，而不是猜测。
 ```
 
-### 2. 环境变量 (.env)
+### 2. 环境变量 (docker-compose.yaml 或 .env)
 
 ```bash
 MISSKEY_INSTANCE_URL=https://misskey.example.com           # Misskey 实例 URL
@@ -100,7 +100,7 @@ python run.py
 
 ## 测试
 
-在运行机器人之前，先测试 API 连接是否正常：
+运行机器人之前，先测试 API 连接是否正常：
 
 ```bash
 # 测试全部连接
