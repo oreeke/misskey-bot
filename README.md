@@ -48,7 +48,7 @@ api:
 # 持久化配置
 persistence:
   db_path: "data/bot_persistence.db"                # SQLite 数据库文件路径
-  cleanup_days: 7                                   # SQLite 数据保存天数
+  cleanup_days: 7                                   # SQLite 数据库文件保存天数
 
 # 日志配置
 logging:
@@ -95,7 +95,7 @@ API_RETRY_DELAY=1.0                                        # API 重试延迟（
 
 # 持久化配置
 PERSISTENCE_DB_PATH=data/bot_persistence.db                # SQLite 数据库文件路径
-PERSISTENCE_CLEANUP_DAYS=7                                 # SQLite 数据文件保存天数
+PERSISTENCE_CLEANUP_DAYS=7                                 # SQLite 数据库文件保存天数
 
 # 日志配置
 LOG_LEVEL=INFO                                             # 日志级别 (DEBUG/INFO/WARNING/ERROR)
