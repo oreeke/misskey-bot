@@ -221,6 +221,15 @@ class MisskeyBot:
         logger.info("正在启动机器人...")
         self.running = True
         
+        # 获取当前用户信息，用于过滤自己发送的消息
+        try:
+            current_user = await self.misskey.get_current_user()
+            self.bot_user_id = current_user.get("id")
+            logger.info(f"机器人用户ID: {self.bot_user_id}")
+        except Exception as e:
+            logger.error(f"获取当前用户信息失败: {e}")
+            self.bot_user_id = None
+        
         # 加载最近的已处理消息到内存缓存
         await self._load_recent_processed_items()
         
@@ -376,24 +385,40 @@ class MisskeyBot:
             data: WebSocket消息数据
         """
         try:
+            logger.debug(f"收到WebSocket消息: {json.dumps(data, ensure_ascii=False, indent=2)}")
+            
             if data.get("type") != "channel":
+                logger.debug(f"忽略非频道消息，类型: {data.get('type')}")
                 return
             
             body = data.get("body", {})
             if not body:
+                logger.debug("消息体为空，忽略")
                 return
             
+            message_type = body.get("type")
+            logger.debug(f"消息类型: {message_type}")
+            
             # 处理提及
-            if body.get("type") == "mention" and self.config.get("bot.response.mention_enabled", True):
+            if message_type == "mention" and self.config.get("bot.response.mention_enabled", True):
                 note = body.get("body", {})
                 if note and note.get("id") not in self.processed_mentions:
+                    logger.info(f"处理提及消息: {note.get('id')}")
                     await self._handle_mention(note)
+                else:
+                    logger.debug(f"提及消息已处理或无效: {note.get('id') if note else 'None'}")
             
-            # 处理聊天消息
-            elif body.get("type") == "messaging_message" and self.config.get("bot.response.chat_enabled", True):
+            # 处理聊天消息 - 尝试多种可能的消息类型
+            elif message_type in ["messaging_message", "messagingMessage", "message", "chat"] and self.config.get("bot.response.chat_enabled", True):
                 message = body.get("body", {})
                 if message and message.get("id") not in self.processed_messages:
+                    logger.info(f"处理聊天消息: {message.get('id')}")
                     await self._handle_message(message)
+                else:
+                    logger.debug(f"聊天消息已处理或无效: {message.get('id') if message else 'None'}")
+            
+            else:
+                logger.debug(f"未处理的消息类型: {message_type}")
                     
         except Exception as e:
             logger.error(f"处理WebSocket消息时出错: {e}")
@@ -412,6 +437,10 @@ class MisskeyBot:
                     for mention in mentions:
                         if mention["id"] not in self.processed_mentions:
                             await self._handle_mention(mention)
+                
+                # 处理聊天消息 - 添加聊天消息轮询
+                if self.config.get("bot.response.chat_enabled", True):
+                    await self._poll_chat_messages()
                 
                 # 重置重试计数
                 retry_count = 0
@@ -480,6 +509,53 @@ class MisskeyBot:
                 except asyncio.CancelledError:
                     break
     
+    async def _poll_chat_messages(self) -> None:
+        """轮询聊天消息
+        
+        由于Misskey的聊天消息通常不通过WebSocket实时推送，
+        需要通过API主动轮询获取新的聊天消息。
+        """
+        try:
+            logger.debug("开始轮询聊天消息")
+            
+            # 获取最近的聊天消息
+            messages = await self.misskey.get_all_chat_messages(limit=20)
+            
+            logger.debug(f"获取到 {len(messages)} 条聊天消息")
+            
+            for message in messages:
+                message_id = message.get("id")
+                if message_id and message_id not in self.processed_messages:
+                    # 检查数据库中是否已处理
+                    if not await self.persistence.is_message_processed(message_id):
+                        logger.info(f"通过轮询发现新聊天消息: {message_id}")
+                        await self._handle_message(message)
+                    else:
+                        logger.debug(f"聊天消息已在数据库中标记为已处理: {message_id}")
+                else:
+                    logger.debug(f"聊天消息已在内存缓存中: {message_id}")
+                        
+        except Exception as e:
+            logger.error(f"轮询聊天消息时出错: {e}")
+            logger.debug(f"轮询聊天消息详细错误: {e}", exc_info=True)
+    
+    async def _get_chat_notifications(self) -> List[Dict[str, Any]]:
+        """获取聊天相关的通知
+        
+        注意：此方法已弃用，建议使用get_all_chat_messages方法
+        
+        Returns:
+            List[Dict[str, Any]]: 通知列表
+        """
+        logger.warning("_get_chat_notifications方法已弃用，请使用get_all_chat_messages方法")
+        try:
+            # 使用新的chat/history端点替代通知API
+            return await self.misskey.get_all_chat_messages(limit=20)
+            
+        except Exception as e:
+            logger.debug(f"获取聊天消息失败: {e}")
+            return []
+    
     async def _handle_mention(self, note: Dict[str, Any]) -> None:
         """处理提及
         
@@ -493,10 +569,6 @@ class MisskeyBot:
         # 检查是否已经处理过这个提及（先检查内存缓存，再检查数据库）
         if note_id in self.processed_mentions or await self.persistence.is_mention_processed(note_id):
             return
-        
-        # 标记为已处理（同时保存到数据库和内存缓存）
-        await self.persistence.mark_mention_processed(note_id)
-        self.processed_mentions.append(note_id)
         
         try:
             # 输入验证
@@ -512,6 +584,11 @@ class MisskeyBot:
             text = note.get("text", "")
             user = note.get("user", {})
             username = user.get("username", "用户")
+            user_id = user.get("id")
+            
+            # 标记为已处理（同时保存到数据库和内存缓存）
+            await self.persistence.mark_mention_processed(note_id, user_id, username)
+            self.processed_mentions.append(note_id)
             
             logger.info(f"收到来自 {username} 的提及: {text}")
             
@@ -577,24 +654,49 @@ class MisskeyBot:
         Args:
             message: 聊天消息数据
         """
+        logger.debug(f"处理聊天消息: {json.dumps(message, ensure_ascii=False, indent=2)}")
+        
         message_id = message.get("id")
         if not message_id:
+            logger.debug("消息缺少ID，跳过处理")
             return
             
         # 检查是否已经处理过这个消息（先检查内存缓存，再检查数据库）
         if message_id in self.processed_messages or await self.persistence.is_message_processed(message_id):
+            logger.debug(f"消息已处理: {message_id}")
             return
         
-        # 标记为已处理（同时保存到数据库和内存缓存）
-        await self.persistence.mark_message_processed(message_id)
-        self.processed_messages.append(message_id)
-        
         try:
-            # 获取消息内容和用户信息
-            text = message.get("text", "")
-            user_id = message.get("userId")
+            # 获取消息内容和用户信息 - 尝试多种可能的字段名
+            text = message.get("text") or message.get("content") or message.get("body", "")
+            user_id = message.get("userId") or message.get("user_id") or message.get("fromUserId") or message.get("from_user_id")
+            
+            # 如果消息中有用户对象，尝试从中获取用户ID
+            if not user_id and "user" in message:
+                user_obj = message.get("user", {})
+                user_id = user_obj.get("id") if isinstance(user_obj, dict) else None
+            
+            # 如果消息中有发送者信息，尝试从中获取用户ID
+            if not user_id and "sender" in message:
+                sender_obj = message.get("sender", {})
+                user_id = sender_obj.get("id") if isinstance(sender_obj, dict) else None
+            
+            logger.debug(f"解析消息 - ID: {message_id}, 用户ID: {user_id}, 文本: {text[:50] if text else 'None'}...")
+            
+            # 检查是否是自己发送的消息
+            if self.bot_user_id and user_id == self.bot_user_id:
+                logger.debug(f"跳过自己发送的消息: {message_id}")
+                # 仍然标记为已处理，避免重复检查
+                await self.persistence.mark_message_processed(message_id, user_id, "private")
+                self.processed_messages.append(message_id)
+                return
+            
+            # 标记为已处理（同时保存到数据库和内存缓存）
+            await self.persistence.mark_message_processed(message_id, user_id, "private")
+            self.processed_messages.append(message_id)
             
             if not user_id or not text:
+                logger.debug(f"消息缺少必要信息 - 用户ID: {user_id}, 文本: {bool(text)}")
                 return
             
             logger.info(f"收到来自用户 {user_id} 的消息: {text}")
@@ -605,8 +707,14 @@ class MisskeyBot:
             # 添加当前消息到历史
             chat_history.append({"role": "user", "content": text})
             
+            # 添加系统提示到聊天历史开头（如果还没有）
+            if not chat_history or chat_history[0].get("role") != "system":
+                chat_history.insert(0, {"role": "system", "content": self.system_prompt})
+            
             # 生成回复
-            reply = await self.deepseek.generate_chat_response(chat_history, self.system_prompt)
+            max_tokens = self.config.get("deepseek.max_tokens", 1000)
+            temperature = self.config.get("deepseek.temperature", 0.8)
+            reply = await self.deepseek.generate_chat_response(chat_history, max_tokens=max_tokens, temperature=temperature)
             
             # 限制回复长度
             max_length = self.config.get("bot.response.max_response_length", 500)
@@ -622,6 +730,7 @@ class MisskeyBot:
             
         except Exception as e:
             logger.error(f"处理消息时出错: {e}")
+            logger.debug(f"处理消息详细错误: {e}", exc_info=True)
     
     async def _get_chat_history(self, user_id: str, limit: int = 5) -> List[Dict[str, str]]:
         """获取聊天历史

@@ -20,7 +20,7 @@ deepseek:
   model: "deepseek-chat"                            # 使用的模型名称
   api_base: "https://api.deepseek.com/v1"           # DeepSeek API 基础 URL
   max_tokens: 1000                                  # 最大生成 token 数
-  temperature: 0.7                                  # 生成温度
+  temperature: 0.8                                  # 温度
 
 # 机器人配置
 bot:
@@ -73,9 +73,9 @@ MISSKEY_ACCESS_TOKEN=your_access_token_here                # Misskey 访问令�
 # DeepSeek 配置
 DEEPSEEK_API_KEY=your_deepseek_api_key_here                # DeepSeek API 密钥
 DEEPSEEK_MODEL=deepseek-chat                               # 使用的模型名称
-DEEPSEEK_API_BASE_URL=https://api.deepseek.com/v1          # DeepSeek API 基础 URL
+DEEPSEEK_API_BASE=https://api.deepseek.com/v1              # DeepSeek API 基础 URL
 DEEPSEEK_MAX_TOKENS=1000                                   # DeepSeek 最大生成 token 数
-DEEPSEEK_TEMPERATURE=0.7                                   # DeepSeek 生成温度
+DEEPSEEK_TEMPERATURE=0.8                                   # DeepSeek 温度
 
 # 机器人配置
 BOT_AUTO_POST_ENABLED=true                                 # 是否启用自动发帖
@@ -149,13 +149,9 @@ python run.py
 运行机器人之前，先测试 API 连接是否正常：
 
 ```bash
-# 测试全部连接
 pytest tests/ -v
-# 或者
 
-# 测试 Misskey API 连接
 python -m tests.test_misskey
 
-# 测试 DeepSeek API 连接
 python -m tests.test_deepseek
 ```

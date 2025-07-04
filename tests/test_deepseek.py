@@ -57,9 +57,7 @@ async def test_deepseek_api():
     deepseek = DeepSeekAPI(api_key=api_key, model=model)
     logger.info(f"使用模型: {model}")
     
-    # 测试生成文本
     try:
-        # 测试简单文本生成
         prompt = "你好，请用一句话介绍一下自己。"
         system_prompt = "你是一个友好的AI助手，名叫DeepSeek。"
         
@@ -69,11 +67,9 @@ async def test_deepseek_api():
         response = await deepseek.generate_text(prompt, system_prompt)
         logger.info(f"收到回复: {response}")
         
-        # 测试聊天响应生成
         user_message = "今天天气怎么样？"
         logger.info(f"测试聊天响应生成，用户消息: '{user_message}'")
         
-        # 创建聊天消息
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}

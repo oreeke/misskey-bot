@@ -147,6 +147,60 @@ class Config:
                 "default"
             ] = os.environ.get("BOT_DEFAULT_VISIBILITY")
         
+        # DeepSeek扩展配置
+        if os.environ.get("DEEPSEEK_API_BASE"):
+            self.config.setdefault("deepseek", {})[
+                "api_base"
+            ] = os.environ.get("DEEPSEEK_API_BASE")
+            
+        if os.environ.get("DEEPSEEK_MAX_TOKENS"):
+            self.config.setdefault("deepseek", {})[
+                "max_tokens"
+            ] = int(os.environ.get("DEEPSEEK_MAX_TOKENS", "1000"))
+            
+        if os.environ.get("DEEPSEEK_TEMPERATURE"):
+            self.config.setdefault("deepseek", {})[
+                "temperature"
+            ] = float(os.environ.get("DEEPSEEK_TEMPERATURE", "0.8"))
+        
+        # API配置
+        if os.environ.get("API_TIMEOUT"):
+            self.config.setdefault("api", {})[
+                "timeout"
+            ] = int(os.environ.get("API_TIMEOUT", "30"))
+            
+        if os.environ.get("API_MAX_RETRIES"):
+            self.config.setdefault("api", {})[
+                "max_retries"
+            ] = int(os.environ.get("API_MAX_RETRIES", "3"))
+            
+        if os.environ.get("API_RETRY_DELAY"):
+            self.config.setdefault("api", {})[
+                "retry_delay"
+            ] = float(os.environ.get("API_RETRY_DELAY", "1.0"))
+        
+        # 持久化配置
+        if os.environ.get("PERSISTENCE_DB_PATH"):
+            self.config.setdefault("persistence", {})[
+                "db_path"
+            ] = os.environ.get("PERSISTENCE_DB_PATH")
+            
+        if os.environ.get("PERSISTENCE_CLEANUP_DAYS"):
+            self.config.setdefault("persistence", {})[
+                "cleanup_days"
+            ] = int(os.environ.get("PERSISTENCE_CLEANUP_DAYS", "7"))
+        
+        # 日志配置
+        if os.environ.get("LOG_LEVEL"):
+            self.config.setdefault("logging", {})[
+                "level"
+            ] = os.environ.get("LOG_LEVEL")
+            
+        if os.environ.get("LOG_PATH"):
+            self.config.setdefault("logging", {})[
+                "path"
+            ] = os.environ.get("LOG_PATH")
+        
         # 系统提示词
         if os.environ.get("SYSTEM_PROMPT"):
             self.config["system_prompt"] = os.environ.get("SYSTEM_PROMPT")

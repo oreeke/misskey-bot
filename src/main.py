@@ -64,14 +64,19 @@ async def main():
     # 加载环境变量
     load_dotenv()
     
+    # 加载配置以获取日志设置
+    config = Config()
+    await config.load()
+    
     # 设置日志
-    log_path = Path("logs")
+    log_path = Path(config.get("logging.path", "logs"))
     log_path.mkdir(exist_ok=True)
+    log_level = config.get("logging.level", "INFO")
     logger.add(
         log_path / "misskey_bot_{time}.log",
         rotation="1 day",
         retention="7 days",
-        level="INFO",
+        level=log_level,
     )
     
     # 记录系统信息
@@ -80,10 +85,6 @@ async def main():
     logger.info("正在启动Misskey机器人...")
     
     try:
-        # 加载配置
-        config = Config()
-        await config.load()
-        
         # 创建并启动机器人
         bot = MisskeyBot(config)
         await bot.start()

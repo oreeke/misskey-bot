@@ -10,7 +10,7 @@ deepseek:
   model: "deepseek-chat"                            # 使用的模型名称
   api_base: "https://api.deepseek.com/v1"           # DeepSeek API 基础URL
   max_tokens: 1000                                  # 最大令牌数
-  temperature: 0.7                                  # 温度参数
+  temperature: 0.8                                  # 温度
 
 bot:
   # 自动发帖配置
@@ -37,8 +37,8 @@ api:
 
 # 持久化配置
 persistence:
-  db_path: "data/bot_persistence.db"               # SQLite 数据库文件路径
-  cleanup_days: 7                                  # SQLite 数据库文件保存天数
+  db_path: "data/bot_persistence.db"                # SQLite 数据库文件路径
+  cleanup_days: 7                                   # SQLite 数据库文件保存天数
 
 # 日志配置
 logging:

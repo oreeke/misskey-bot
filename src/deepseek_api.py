@@ -132,23 +132,7 @@ class DeepSeekAPI:
      
     async def generate_text(self, prompt: str, system_prompt: Optional[str] = None, 
                             max_tokens: int = DEFAULT_MAX_TOKENS, temperature: float = DEFAULT_TEMPERATURE) -> str:
-        """生成文本
-        
-        Args:
-            prompt: 用户输入的提示
-            system_prompt: 系统提示（可选）
-            max_tokens: 最大生成token数
-            temperature: 生成温度
-            
-        Returns:
-            生成的文本内容
-            
-        Raises:
-            ValueError: 当输入参数无效时
-            APIConnectionError: 当API连接失败时
-            APIRateLimitError: 当API速率限制时
-            CustomAuthError: 当API认证失败时
-        """
+        """生成文本"""
         # 输入验证
         if not prompt or not isinstance(prompt, str):
             raise ValueError("提示内容不能为空且必须是字符串")
@@ -248,16 +232,7 @@ class DeepSeekAPI:
             raise APIConnectionError("DeepSeek", f"API调用失败，已达到最大重试次数: {last_error}")
     
     async def generate_post(self, system_prompt: str, context: Optional[str] = None, prompt: Optional[str] = None) -> str:
-        """生成社交媒体帖子
-        
-        Args:
-            system_prompt: 系统提示词
-            context: 上下文信息
-            prompt: 用户提示词
-            
-        Returns:
-            生成的帖子内容
-        """
+        """生成社交媒体帖子"""
         # 构建完整的提示词
         full_prompt = ""
         if context:
@@ -269,43 +244,18 @@ class DeepSeekAPI:
         return await self.generate_text(full_prompt, system_prompt, max_tokens=500, temperature=0.8)
     
     async def generate_reply(self, original_text: str, system_prompt: str, username: Optional[str] = None) -> str:
-        """生成回复内容
-        
-        Args:
-            original_text: 原始帖子内容
-            system_prompt: 系统提示词
-            username: 用户名（可选）
-            
-        Returns:
-            生成的回复内容
-        """
+        """生成回复内容"""
         # 构建回复提示词
         reply_prompt = f"请对以下内容生成一个有见解、友善的回复：\n\n{original_text}"
         
         if username:
             reply_prompt += f"\n\n（回复给用户：@{username}）"
         
-        return await self.generate_text(reply_prompt, system_prompt, max_tokens=300, temperature=0.7)
+        return await self.generate_text(reply_prompt, system_prompt, max_tokens=300, temperature=0.8)
     
     async def generate_chat_response(self, messages: List[Dict[str, str]], 
                                       max_tokens: int = DEFAULT_MAX_TOKENS, temperature: float = DEFAULT_TEMPERATURE) -> str:
-        """生成聊天响应
-        
-        Args:
-            chat_history: 聊天历史，格式为 [{"role": "user", "content": "..."}, ...]
-            system_prompt: 系统提示词
-            max_tokens: 最大token数
-            temperature: 温度参数
-            
-        Returns:
-            生成的聊天响应
-            
-        Raises:
-            ValueError: 当输入参数无效时
-            APIConnectionError: 当API连接失败时
-            APIRateLimitError: 当API速率限制时
-            CustomAuthError: 当API认证失败时
-        """
+        """生成聊天响应"""
         # 输入验证
         if not messages or not isinstance(messages, list):
             raise ValueError("消息列表不能为空且必须是列表")

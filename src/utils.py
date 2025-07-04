@@ -75,7 +75,6 @@ async def monitor_memory_usage() -> None:
         try:
             memory_usage = get_memory_usage()
             
-            # 仅在调试模式下记录常规内存使用情况
             logger.debug(f"内存使用: {memory_usage['rss_mb']}MB (物理), {memory_usage['vms_mb']}MB (虚拟), {memory_usage['percent']}%")
             
             # 只在内存使用异常高时发出警告

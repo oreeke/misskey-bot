@@ -154,21 +154,7 @@ class MisskeyAPI:
             self.session = None
     
     async def _make_request(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """发送API请求
-        
-        Args:
-            endpoint: API端点
-            data: 请求数据
-            
-        Returns:
-            API响应数据
-            
-        Raises:
-            ValueError: 当输入参数无效时
-            APIConnectionError: 当API连接失败时
-            APIRateLimitError: 当API速率限制时
-            AuthenticationError: 当API认证失败时
-        """
+        """发送API请求"""
         # 输入验证
         if not endpoint or not isinstance(endpoint, str):
             raise ValueError("API端点不能为空且必须是字符串")
@@ -277,16 +263,7 @@ class MisskeyAPI:
         return await self._make_request(endpoint, data)
     
     async def create_note(self, text: str, visibility: Optional[str] = None, reply_id: Optional[str] = None) -> Dict[str, Any]:
-        """创建帖子（发帖）
-        
-        Args:
-            text: 帖子内容
-            visibility: 可见性，可选值: public, home, followers, specified。如果为None，则使用配置中的默认值
-            reply_id: 回复的帖子ID
-            
-        Returns:
-            创建的帖子信息
-        """
+        """创建帖子（发帖）"""
         # 如果没有指定可见性，则从配置中获取默认值
         if visibility is None:
             if self.config:
@@ -304,15 +281,7 @@ class MisskeyAPI:
         return await self._make_request("notes/create", data)
     
     async def get_mentions(self, limit: int = 10, since_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """获取提及（@）
-        
-        Args:
-            limit: 返回的最大数量
-            since_id: 起始ID，只返回比这个ID更新的提及
-            
-        Returns:
-            提及列表
-        """
+        """获取提及（@）"""
         data = {
             "limit": limit,
         }
@@ -323,14 +292,7 @@ class MisskeyAPI:
         return await self._make_request("notes/mentions", data)
     
     async def get_note(self, note_id: str) -> Dict[str, Any]:
-        """获取帖子信息
-        
-        Args:
-            note_id: 帖子ID
-            
-        Returns:
-            帖子信息
-        """
+        """获取帖子信息"""
         data = {
             "noteId": note_id,
         }
@@ -338,15 +300,7 @@ class MisskeyAPI:
         return await self._make_request("notes/show", data)
     
     async def get_user(self, user_id: Optional[str] = None, username: Optional[str] = None) -> Dict[str, Any]:
-        """获取用户信息
-        
-        Args:
-            user_id: 用户ID
-            username: 用户名
-            
-        Returns:
-            用户信息
-        """
+        """获取用户信息"""
         if not user_id and not username:
             raise ValueError("必须提供user_id或username")
         
@@ -358,17 +312,12 @@ class MisskeyAPI:
         
         return await self._make_request("users/show", data)
     
+    async def get_current_user(self) -> Dict[str, Any]:
+        """获取当前用户信息"""
+        return await self._make_request("i", {})
+    
     async def get_messages(self, user_id: str, limit: int = 10, since_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """获取与指定用户的聊天消息
-        
-        Args:
-            user_id: 用户ID
-            limit: 返回的最大数量
-            since_id: 起始ID，只返回比这个ID更新的消息
-            
-        Returns:
-            消息列表
-        """
+        """获取与指定用户的聊天消息"""
         data = {
             "userId": user_id,
             "limit": limit,
@@ -377,24 +326,33 @@ class MisskeyAPI:
         if since_id:
             data["sinceId"] = since_id
         
-        return await self._make_request("messaging/messages", data)
+        return await self._make_request("chat/messages/user-timeline", data)
     
     async def send_message(self, user_id: str, text: str) -> Dict[str, Any]:
-        """发送聊天消息
-        
-        Args:
-            user_id: 用户ID
-            text: 消息内容
-            
-        Returns:
-            发送的消息信息
-        """
+        """发送聊天消息"""
         data = {
-            "userId": user_id,
+            "toUserId": user_id,
             "text": text,
         }
         
-        return await self._make_request("messaging/messages/create", data)
+        return await self._make_request("chat/messages/create-to-user", data)
+    
+    async def get_all_chat_messages(self, limit: int = 20, room: bool = False) -> List[Dict[str, Any]]:
+        """获取聊天历史记录"""
+        data = {
+            "limit": min(max(limit, 1), 100),  # 确保limit在1-100范围内
+            "room": room,
+        }
+        
+        try:
+            # 使用正确的chat/history端点获取聊天历史
+            chat_messages = await self._make_request("chat/history", data)
+            logger.debug(f"通过chat/history API获取到 {len(chat_messages)} 条聊天消息")
+            return chat_messages
+            
+        except Exception as e:
+            logger.debug(f"获取聊天消息失败: {e}")
+            return []
     
     async def _ws_heartbeat(self) -> None:
         """WebSocket心跳，保持连接活跃"""
@@ -416,12 +374,7 @@ class MisskeyAPI:
     
     async def connect_websocket(self, callback: Callable[[Dict[str, Any]], Any], 
                                max_reconnect_attempts: int = 10) -> None:
-        """连接到Misskey WebSocket API
-        
-        Args:
-            callback: 接收消息的回调函数
-            max_reconnect_attempts: 最大重连尝试次数
-        """
+        """连接到Misskey WebSocket API"""
         reconnect_attempts = 0
         reconnect_delay = 1.0  # 初始重连延迟（秒）
         

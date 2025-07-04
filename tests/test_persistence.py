@@ -34,16 +34,13 @@ async def test_persistence():
         else:
             print(f"✓ 数据库文件已创建: {db_path}")
         
-        # 测试基本功能
         test_mention_id = "test_mention_123"
         test_message_id = "test_message_456"
         
-        # 测试标记处理
         await persistence.mark_mention_processed(test_mention_id)
         await persistence.mark_message_processed(test_message_id)
         print("✓ 测试数据已标记为已处理")
         
-        # 测试查询
         is_mention_processed = await persistence.is_mention_processed(test_mention_id)
         is_message_processed = await persistence.is_message_processed(test_message_id)
         
@@ -52,15 +49,12 @@ async def test_persistence():
         else:
             print("✗ 查询功能异常")
         
-        # 获取统计信息
         stats = await persistence.get_stats()
         print(f"✓ 统计信息: 提及 {stats['mentions_count']} 条，消息 {stats['messages_count']} 条")
         
-        # 清理测试数据
-        await persistence.cleanup_old_records(0)  # 清理所有记录
+        await persistence.cleanup_old_records(0)
         print("✓ 测试数据已清理")
         
-        # 关闭连接
         await persistence.close()
         print("✓ 持久化管理器已关闭")
         
