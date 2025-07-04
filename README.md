@@ -4,6 +4,8 @@
 
 当然也可以通过修改配置中的 `model` 和 `api_base` 选择任何兼容 Openai API 的其他模型。
 
+当然也可以通过修改配置中的 `model` 和 `api_base` 选择任何兼容 Openai API 的其他模型。
+
 ## 配置
 
 选择其中一种方式配置机器人：
