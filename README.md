@@ -39,7 +39,7 @@ bot:
   visibility:
     default: "public"                               # 默认帖子可见性（public/home/followers/specified）
 
-# API 配置
+# API 超时配置
 api:
   timeout: 30                                       # API 请求超时时间（秒）
   max_retries: 3                                    # 最大重试次数
@@ -88,7 +88,7 @@ BOT_RESPONSE_CHAT_ENABLED=true                             # 是否响应聊天�
 BOT_RESPONSE_MAX_LENGTH=500                                # 最大响应长度（字符数）
 BOT_DEFAULT_VISIBILITY=public                              # 默认帖子可见性（public/home/followers/specified）
 
-# API 配置
+# API 超时配置
 API_TIMEOUT=30                                             # API 请求超时时间（秒）
 API_MAX_RETRIES=3                                          # API 最大重试次数
 API_RETRY_DELAY=1.0                                        # API 重试延迟（秒）

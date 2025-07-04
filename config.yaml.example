@@ -29,7 +29,7 @@ bot:
   visibility:
     default: "public"                               # 默认帖子可见性（public/home/followers/specified）
 
-# API 配置
+# API 超时配置
 api:
   timeout: 30                                       # API 请求超时时间（秒）
   max_retries: 3                                    # 最大重试次数
