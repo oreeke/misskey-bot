@@ -1,6 +1,7 @@
 # Misskey Bot
 
 一只由 Python 实现的 Misskey 机器人，使用 DeepSeek 生成帖子或与用户聊天。
+当然也可以通过修改配置中的 `model` 和 `api_base` 选择任何兼容 Openai API 的其他模型。
 
 ## 配置
 
@@ -20,7 +21,7 @@ deepseek:
   model: "deepseek-chat"                            # 使用的模型名称
   api_base: "https://api.deepseek.com/v1"           # DeepSeek API 基础 URL
   max_tokens: 1000                                  # 最大生成 token 数
-  temperature: 0.8                                  # 温度
+  temperature: 0.8                                  # 温度参数
 
 # 机器人配置
 bot:
@@ -75,7 +76,7 @@ DEEPSEEK_API_KEY=your_deepseek_api_key_here                # DeepSeek API 密钥
 DEEPSEEK_MODEL=deepseek-chat                               # 使用的模型名称
 DEEPSEEK_API_BASE=https://api.deepseek.com/v1              # DeepSeek API 基础 URL
 DEEPSEEK_MAX_TOKENS=1000                                   # DeepSeek 最大生成 token 数
-DEEPSEEK_TEMPERATURE=0.8                                   # DeepSeek 温度
+DEEPSEEK_TEMPERATURE=0.8                                   # DeepSeek 温度参数
 
 # 机器人配置
 BOT_AUTO_POST_ENABLED=true                                 # 是否启用自动发帖
