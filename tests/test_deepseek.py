@@ -30,17 +30,15 @@ logger = logging.getLogger('test_deepseek')
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_deepseek_api():
     """测试DeepSeek API"""
-    logger.info("开始测试DeepSeek API连接")
-    
     # 尝试从配置文件加载
     try:
         config = Config()
         await config.load()
         api_key = config.get('deepseek.api_key')
         model = config.get('deepseek.model', 'deepseek-chat')
-        logger.info("从配置文件加载成功")
     except Exception as e:
         logger.warning(f"从配置文件加载失败: {e}，尝试从环境变量加载")
         # 加载环境变量
@@ -50,54 +48,35 @@ async def test_deepseek_api():
         model = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
     
     if not api_key:
-        logger.error("错误: 未设置DeepSeek API密钥，请检查配置文件或环境变量")
-        return False
+        pytest.skip("DeepSeek API密钥未配置，跳过API测试")
     
     # 初始化DeepSeek API客户端
     deepseek = DeepSeekAPI(api_key=api_key, model=model)
-    logger.info(f"使用模型: {model}")
+    assert deepseek is not None
     
-    try:
-        prompt = "你好，请用一句话介绍一下自己。"
-        system_prompt = "你是一个友好的AI助手，名叫DeepSeek。"
-        
-        logger.info(f"发送提示: {prompt}")
-        logger.info(f"系统提示: {system_prompt}")
-        
-        response = await deepseek.generate_text(prompt, system_prompt)
-        logger.info(f"收到回复: {response}")
-        
-        user_message = "今天天气怎么样？"
-        logger.info(f"测试聊天响应生成，用户消息: '{user_message}'")
-        
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
-        
-        chat_response = await deepseek.generate_chat_response(
-            messages=messages
-        )
-        logger.info(f"生成的聊天响应: {chat_response}")
-        
-        logger.info("DeepSeek API连接测试成功!")
-        return True
-    except Exception as e:
-        logger.error(f"DeepSeek API连接测试失败: {e}")
-        return False
+    # 测试文本生成
+    prompt = "你好，请用一句话介绍一下自己。"
+    system_prompt = "你是一个友好的AI助手，名叫DeepSeek。"
+    
+    response = await deepseek.generate_text(prompt, system_prompt)
+    assert response is not None
+    assert isinstance(response, str)
+    assert len(response) > 0
+    
+    # 测试聊天响应生成
+    user_message = "今天天气怎么样？"
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message}
+    ]
+    
+    chat_response = await deepseek.generate_chat_response(messages=messages)
+    assert chat_response is not None
+    assert isinstance(chat_response, str)
+    assert len(chat_response) > 0
 
 
-async def main():
-    """主函数"""
-    success = await test_deepseek_api()
-    if success:
-        print("\n✅ DeepSeek API连接测试成功!")
-        return 0
-    else:
-        print("\n❌ DeepSeek API连接测试失败!")
-        return 1
-
-
-if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    sys.exit(exit_code)
+# 可以通过 pytest 命令运行这个测试:
+# pytest tests/test_deepseek.py -v
+# pytest tests/test_deepseek.py::test_deepseek_api -v
+# pytest tests/test_deepseek.py -m "integration" -v  # 运行集成测试

@@ -44,3 +44,25 @@ class AuthenticationError(MisskeyBotError):
 class WebSocketConnectionError(MisskeyBotError):
     """WebSocket连接错误异常，当WebSocket连接失败或断开时抛出"""
     pass
+
+
+class MisskeyAPIError(MisskeyBotError):
+    """Misskey API错误异常，当Misskey API调用失败时抛出"""
+    
+    def __init__(self, message: str, status_code: int = None):
+        self.status_code = status_code
+        if status_code:
+            super().__init__(f"Misskey API错误 (HTTP {status_code}): {message}")
+        else:
+            super().__init__(f"Misskey API错误: {message}")
+
+
+class DeepSeekAPIError(MisskeyBotError):
+    """DeepSeek API错误异常，当DeepSeek API调用失败时抛出"""
+    
+    def __init__(self, message: str, error_code: str = None):
+        self.error_code = error_code
+        if error_code:
+            super().__init__(f"DeepSeek API错误 ({error_code}): {message}")
+        else:
+            super().__init__(f"DeepSeek API错误: {message}")

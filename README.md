@@ -164,12 +164,18 @@ python run.py
 
 ## 测试
 
-> 运行机器人之前，先测试 API 连接是否正常：
+> 运行机器人之前，可以先跑跑测试：
 
 ```bash
-# 测试 Misskey API
-python -m tests.test_misskey
+# 运行所有测试
+pytest tests/ -v
 
-# 测试 DeepSeek API
-python -m tests.test_deepseek
+# 跳过慢速测试
+pytest tests/ -m "not slow" -v
+
+# 只运行集成测试
+pytest tests/ -m "integration" -v
+
+# 运行特定测试文件
+pytest tests/test_build.py -v
 ```
