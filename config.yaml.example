@@ -1,0 +1,48 @@
+# Misskey AI 配置文件示例
+# 复制此文件为 config.yaml 并填写你的配置
+
+misskey:
+  instance_url: "https://misskey.example.com"       # Misskey 实例 URL
+  access_token: "your_access_token_here"            # Misskey 访问令牌
+
+deepseek:
+  api_key: "your_deepseek_api_key_here"             # DeepSeek API 密钥
+  model: "deepseek-chat"                            # 使用的模型名称
+  api_base: "https://api.deepseek.com/v1"           # DeepSeek API 基础URL
+  max_tokens: 1000                                  # 最大令牌数
+  temperature: 0.8                                  # 温度参数
+
+bot:
+  auto_post:
+    enabled: true                                   # 是否启用自动发帖
+    interval_minutes: 60                            # 发帖间隔（分钟）
+    max_posts_per_day: 10                           # 每日最大发帖数量
+    max_post_length: 500                            # 最大发帖长度（字符数）
+    prompt: "请生成一篇有趣、有见解的社交媒体帖子。"    # 自动发帖提示词
+  
+  response:
+    mention_enabled: true                           # 是否响应提及（@）
+    chat_enabled: true                              # 是否响应聊天消息
+    max_response_length: 500                        # 最大响应长度（字符数）
+  
+  visibility:
+    default: "public"                               # 默认帖子可见性（public/home/followers/specified）
+
+api:
+  timeout: 30                                       # API 请求超时时间（秒）
+  max_retries: 3                                    # 最大重试次数
+  retry_delay: 1.0                                  # 重试延迟（秒）
+
+persistence:
+  db_path: "data/bot_persistence.db"                # SQLite 数据库文件路径
+  cleanup_days: 7                                   # SQLite 数据库文件保存天数
+
+logging:
+  level: "INFO"                                     # 日志级别 (DEBUG/INFO/WARNING/ERROR)
+  path: "logs"                                      # 日志文件路径
+  
+system_prompt: |
+  你是一个友好的AI助手，运行在Misskey平台上。
+  请用简短、友好的方式回答问题。
+  避免使用过于复杂的术语，保持回答简洁明了。
+  如果不确定答案，请诚实地表明你不知道，而不是猜测。
