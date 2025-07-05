@@ -9,10 +9,8 @@
 
 > 选择一个配置文件：
 
-### config.yaml
-
 <details>
-<summary>📃</summary>
+<summary>📃 config.yaml</summary>
 
 ```yaml
 misskey:
@@ -62,10 +60,8 @@ system_prompt: |
 
 </details>
 
-### docker-compose.yaml 或 .env
-
 <details>
-<summary>📃</summary>
+<summary>📃 docker-compose.yaml 或 .env</summary>
 
 ```bash
 MISSKEY_INSTANCE_URL=https://misskey.example.com           # Misskey 实例 URL
@@ -105,14 +101,29 @@ LOG_PATH=logs                                              # 日志文件路径
 
 ## 部署
 
-### 克隆仓库
-
 ```bash
+# 克隆仓库
 git clone https://github.com/oreeke/misskey-ai.git
 cd misskey-ai
 ```
 
 > 选择一种部署方式：
+
+### 本地部署
+
+```bash
+# 需要 Python 3.11 或更高版本
+
+# 复制并重命名示例文件
+cp config.yaml.example config.yaml
+# 编辑 config.yaml ，填入你的配置
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 运行机器人
+python run.py
+```
 
 ### Docker Compose
 
@@ -130,21 +141,11 @@ docker compose build
 docker compose up -d
 ```
 
-### 本地部署
-
-```bash
-# 需要 python 3.11 或更高版本
-
-# 复制并重命名示例文件
-cp config.yaml.example config.yaml
-# 编辑 config.yaml ，填入你的配置
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 运行机器人
-python run.py
-```
+> \[!SUCCESS]
+>
+> 程序启动后首先查询本地历史消息，防止重复响应。
+> 接着发起轮询，每分钟1次，收到新消息则生成回复。
+> 运行1分钟后，根据设置进入自动发帖循环。
 
 ---
 
@@ -155,6 +156,9 @@ python run.py
 ### Pytest
 
 ```bash
+# 安装依赖
+pip install -r requirements-dev.txt
+
 # 运行所有测试
 pytest tests/ -v
 
