@@ -10,9 +10,10 @@ RUN apt-get update && \
 
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
+COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r requirements-dev.txt
 
 FROM python:3.11-slim AS runtime
 
@@ -21,14 +22,11 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=utf-8 \
-    PATH="/opt/venv/bin:$PATH" \
-    TZ=Asia/Shanghai
+    PATH="/opt/venv/bin:$PATH"
 
 RUN groupadd -r botuser && useradd -r -g botuser botuser && \
     mkdir -p /app/logs && \
-    chown -R botuser:botuser /app && \
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
-    echo $TZ > /etc/timezone
+    chown -R botuser:botuser /app
 
 COPY --from=builder /opt/venv /opt/venv
 COPY --chown=botuser:botuser . /app/
