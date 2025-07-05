@@ -121,6 +121,9 @@ cp config.yaml.example config.yaml
 # 安装依赖
 pip install -r requirements.txt
 
+# 安装测试依赖（可选）
+pip install -r requirements-dev.txt
+
 # 运行机器人
 python run.py
 ```
@@ -156,9 +159,6 @@ docker compose up -d
 ### Pytest
 
 ```bash
-# 安装依赖
-pip install -r requirements-dev.txt
-
 # 运行所有测试
 pytest tests/ -v
 
