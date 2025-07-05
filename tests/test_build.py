@@ -128,7 +128,3 @@ def test_docker_compose_syntax():
         pytest.skip("docker-compose命令未找到")
     
     assert result.returncode == 0, f"docker-compose.yaml语法错误: {result.stderr}"
-
-
-# pytest tests/test_build.py -v
-# pytest tests/test_build.py::test_all_imports -v

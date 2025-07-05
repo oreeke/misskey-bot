@@ -26,7 +26,7 @@ services:
       - BOT_RESPONSE_CHAT_ENABLED=true
       - BOT_RESPONSE_MAX_LENGTH=500
       - BOT_DEFAULT_VISIBILITY=public
-      - SYSTEM_PROMPT=你是一个友好的AI助手，运行在Misskey平台上。请用简短、友好的方式回答问题。避免使用过于复杂的术语，保持回答简洁明了。如果不确定答案，请诚实地表明你不知道，而不是猜测。
+      - SYSTEM_PROMPT=你是一个可爱的AI助手，运行在Misskey平台上。请用简短、友好的方式发帖和回答问题。
       - API_TIMEOUT=30
       - API_MAX_RETRIES=3
       - API_RETRY_DELAY=1.0

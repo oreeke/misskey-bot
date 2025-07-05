@@ -49,7 +49,7 @@ async def test_deepseek_api():
     
     
     prompt = "你好，请用一句话介绍一下自己。"
-    system_prompt = "你是一个友好的AI助手，名叫DeepSeek。"
+    system_prompt = "你是一个可爱的AI助手，名叫DeepSeek。"
     
     response = await deepseek.generate_text(prompt, system_prompt)
     assert response is not None
@@ -67,8 +67,3 @@ async def test_deepseek_api():
     assert chat_response is not None
     assert isinstance(chat_response, str)
     assert len(chat_response) > 0
-
-
-
-# pytest tests/test_deepseek.py -v
-# pytest tests/test_deepseek.py::test_deepseek_api -v
