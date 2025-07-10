@@ -41,7 +41,3 @@ persistence:
 logging:
   level: "INFO"                                     # 日志级别 (DEBUG/INFO/WARNING/ERROR)
   path: "logs"                                      # 日志文件路径
-
-# 插件配置已移至各插件目录下的 config.yaml 文件
-# 请到 plugins/ 目录下的各插件文件夹中配置插件
-# 例如: plugins/example/config.yaml, plugins/weather/config.yaml
