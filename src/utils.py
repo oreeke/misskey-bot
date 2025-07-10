@@ -62,10 +62,8 @@ async def check_api_health(check_func: Callable[[], Awaitable[bool]], name: str)
 def get_memory_usage() -> Dict[str, Any]:
     process = psutil.Process(os.getpid())
     memory_info = process.memory_info()
-    
     rss_mb = memory_info.rss / (1024 * 1024)
     vms_mb = memory_info.vms / (1024 * 1024)
-    
     return {
         "rss_mb": round(rss_mb, 2),
         "vms_mb": round(vms_mb, 2),
@@ -75,15 +73,12 @@ def get_memory_usage() -> Dict[str, Any]:
 async def monitor_memory_usage() -> None:
     interval_seconds = 3600
     threshold_mb = 1024
-    
     while True:
         try:
             memory_usage = get_memory_usage()
             logger.debug(f"内存使用: {memory_usage['rss_mb']} MB (物理), {memory_usage['vms_mb']} MB (虚拟), {memory_usage['percent']}%")
-        
             if memory_usage["rss_mb"] > threshold_mb:
                 logger.warning(f"内存使用过高: {memory_usage['rss_mb']} MB")
-            
             await asyncio.sleep(interval_seconds)
         except asyncio.CancelledError:
             break
@@ -106,18 +101,14 @@ async def log_system_info() -> None:
 
 def health_check() -> bool:
     try:
-    
         memory_usage = get_memory_usage()
         if memory_usage["percent"] > 90:
             logger.warning(f"内存使用过高: {memory_usage['percent']}%")
             return False
-        
         current_process = psutil.Process(os.getpid())
         if not current_process.is_running():
             return False
-        
         return True
-        
     except Exception as e:
         logger.error(f"健康检查失败: {e}")
         return False

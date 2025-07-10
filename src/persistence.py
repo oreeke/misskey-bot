@@ -6,7 +6,6 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
-
 from loguru import logger
 from .constants import DEFAULT_DB_PATH
 
@@ -74,7 +73,6 @@ class PersistenceManager:
             "CREATE INDEX IF NOT EXISTS idx_messages_message_id ON processed_messages(message_id)",
             "CREATE INDEX IF NOT EXISTS idx_messages_processed_at ON processed_messages(processed_at)"
         ]
-        
         cursor = self._connection.cursor()
         for statement in schema_statements:
             cursor.execute(statement)
@@ -105,7 +103,6 @@ class PersistenceManager:
             "CREATE INDEX IF NOT EXISTS idx_messages_message_id ON processed_messages(message_id)",
             "CREATE INDEX IF NOT EXISTS idx_messages_processed_at ON processed_messages(processed_at)"
         ]
-        
         cursor = self._connection.cursor()
         for statement in schema_statements:
             cursor.execute(statement)
@@ -180,7 +177,6 @@ class PersistenceManager:
     
     async def cleanup_old_records(self, days: int = 7) -> int:
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
-        
         async with self._lock:
             cursor = self._connection.cursor()
             cursor.execute(
@@ -193,13 +189,10 @@ class PersistenceManager:
                 (cutoff_date,)
             )
             messages_deleted = cursor.rowcount
-            
             self._connection.commit()
-            
             total_deleted = mentions_deleted + messages_deleted
             if total_deleted > 0:
                 logger.debug(f"已清理 {total_deleted} 条过期记录 (提及: {mentions_deleted}, 消息: {messages_deleted})")
-            
             return total_deleted
     
     async def get_recent_mentions(self, limit: int = 100) -> List[dict]:
@@ -245,14 +238,12 @@ class PersistenceManager:
                 (today,)
             )
             today_mentions = cursor.fetchone()[0]
-            
             cursor.execute(
                 "SELECT COUNT(*) FROM processed_messages WHERE DATE(processed_at) = ?",
                 (today,)
             )
             today_messages = cursor.fetchone()[0]
             db_size = self.db_path.stat().st_size if self.db_path.exists() else 0
-            
             return {
                 'total_mentions': total_mentions,
                 'total_messages': total_messages,

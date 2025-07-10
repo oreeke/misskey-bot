@@ -6,7 +6,6 @@ from typing import Dict, Any, Optional, List
 from loguru import logger
 
 class PluginBase(ABC):
-    
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.name = self.__class__.__name__

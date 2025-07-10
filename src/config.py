@@ -21,21 +21,15 @@ class Config:
     
     async def load(self) -> None:
         config_path = Path(self.config_path)
-        
         if not config_path.exists():
             logger.error(f"配置文件不存在: {config_path}")
             raise ConfigurationError(f"配置文件不存在: {config_path}")
-        
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 self.config = yaml.safe_load(f)
-            
             logger.debug(f"已加载配置文件: {config_path}")
-            
             self._override_from_env()
-            
             self._validate_config()
-            
         except yaml.YAMLError as e:
             logger.error(f"配置文件格式错误: {e}")
             raise ConfigurationError(f"配置文件格式错误: {e}")
@@ -77,7 +71,6 @@ class Config:
             "LOG_LEVEL": ("logging.level", str),
             "LOG_PATH": ("logging.path", str)
         }
-        
         for env_key, (config_path, value_type) in env_mappings.items():
             env_value = os.environ.get(env_key)
             if env_value:
@@ -86,10 +79,8 @@ class Config:
     def _set_config_value(self, path: str, value: str, value_type: type) -> None:
         keys = path.split(".")
         config = self.config
-        
         for key in keys[:-1]:
             config = config.setdefault(key, {})
-        
         if value_type == bool:
             config[keys[-1]] = value.lower() in ("true", "1", "yes")
         elif value_type == int:
@@ -102,13 +93,10 @@ class Config:
     def _process_string_value(self, value: str, config_path: str) -> str:
         if not isinstance(value, str):
             return value
-        
         if value.startswith("file://"):
             return self._load_from_file(value[7:])
-        
         if self._is_prompt_config(config_path) and self._looks_like_file_path(value):
             return self._load_from_file(value)
-        
         return value
     
     def _load_from_file(self, file_path: str) -> str:
@@ -116,7 +104,6 @@ class Config:
             path = Path(file_path)
             if not path.is_absolute():
                 path = Path(self.config_path).parent / path
-            
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 logger.debug(f"从文件加载配置: {file_path}")
@@ -128,11 +115,9 @@ class Config:
     def _looks_like_file_path(self, value: str) -> bool:
         if len(value) > 200:
             return False
-        
         file_indicators = ['.txt']
         if any(value.endswith(ext) for ext in file_indicators):
             return True
-        
         path_indicators = ['prompts']
         return any(indicator in value for indicator in path_indicators)
     
@@ -149,41 +134,34 @@ class Config:
             ("misskey.access_token", "Misskey 访问令牌"),
             ("deepseek.api_key", "DeepSeek API密钥"),
         ]
-        
         missing_configs = []
         for config_path, config_name in required_configs:
             if not self.get(config_path):
                 missing_configs.append(config_name)
-        
         if missing_configs:
             error_msg = f"缺少必要的配置项: {', '.join(missing_configs)}"
             logger.error(error_msg)
             raise ConfigurationError(error_msg)
-        
         instance_url = self.get("misskey.instance_url")
         if instance_url and not self._is_valid_url(instance_url):
             error_msg = f"Misskey实例URL格式无效: {instance_url}"
             logger.error(error_msg)
             raise ValueError(error_msg)
-        
         deepseek_key = self.get("deepseek.api_key")
         if deepseek_key and not self._is_valid_api_key(deepseek_key):
             error_msg = "DeepSeek API密钥格式无效"
             logger.error(error_msg)
             raise ValueError(error_msg)
-        
         logger.debug("配置验证通过")
     
     def get(self, key: str, default: Any = None) -> Any:
         keys = key.split(".")
         value = self.config
-        
         for k in keys:
             if isinstance(value, dict) and k in value:
                 value = value[k]
             else:
                 return default
-        
         return value
     
     def _is_valid_url(self, url: str) -> bool:
@@ -198,28 +176,22 @@ class Config:
     def _is_valid_api_key(self, api_key: str) -> bool:
         if not api_key or not isinstance(api_key, str):
             return False
-        
         if len(api_key.strip()) < 10:
             return False
-        
         placeholder_patterns = [
             r'your.*key.*here',
             r'replace.*with.*key',
             r'api.*key.*placeholder',
             r'sk-[a-zA-Z0-9]{20,}',
         ]
-        
         api_key_lower = api_key.lower()
         for pattern in placeholder_patterns[:-1]:
             if re.search(pattern, api_key_lower):
                 return False
-        
         return True
     
     def get_typed(self, key: str, default: T = None, expected_type: type = None) -> T:
         value = self.get(key, default)
-        
         if expected_type and value is not None and not isinstance(value, expected_type):
             raise ValueError(f"配置项 {key} 期望类型 {expected_type.__name__}，实际类型 {type(value).__name__}")
-        
         return value
