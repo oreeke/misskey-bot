@@ -13,10 +13,11 @@ plugins/
 ## 基础模板
 
 ```python
+from typing import Dict, Any, Optional
 from src.plugin_base import PluginBase
 
 class YourPlugin(PluginBase):
-    def __init__(self, config):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
     
     async def initialize(self) -> bool:
@@ -25,7 +26,7 @@ class YourPlugin(PluginBase):
     async def cleanup(self) -> None:
         pass
     
-    async def on_mention(self, mention_data):
+    async def on_mention(self, mention_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         text = mention_data.get("text", "")
         if "关键词" in text:
             return {
@@ -33,6 +34,18 @@ class YourPlugin(PluginBase):
                 "response": "回复内容"
             }
         return None
+    
+    async def on_message(self, message_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        return None
+    
+    async def on_auto_post(self) -> Optional[Dict[str, Any]]:
+        return None
+    
+    async def on_startup(self) -> None:
+        pass
+    
+    async def on_shutdown(self) -> None:
+        pass
 ```
 
 ## 配置文件
