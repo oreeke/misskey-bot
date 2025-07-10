@@ -5,7 +5,7 @@ import asyncio
 import json
 from collections import deque
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from loguru import logger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -64,7 +64,6 @@ class MisskeyBot:
             raise ValueError("配置参数必须是Config类型")
         
         self.config = config
-        
         self.startup_time = datetime.now(timezone.utc)
         logger.debug(f"机器人启动时间 (UTC): {self.startup_time.isoformat()}")
 
@@ -87,7 +86,6 @@ class MisskeyBot:
             
             self.scheduler = AsyncIOScheduler()
             self._cleanup_needed = True
-            
             logger.debug("API 客户端和调度器初始化完成")
             
         except Exception as e:
@@ -96,30 +94,21 @@ class MisskeyBot:
         
         db_path = config.get("persistence.db_path", DEFAULT_DB_PATH)
         self.persistence = PersistenceManager(db_path)
-        
         self.plugin_manager = PluginManager(config)
-        
         self.processed_mentions: deque = deque(maxlen=MAX_PROCESSED_ITEMS_CACHE)
         self.processed_messages: deque = deque(maxlen=MAX_PROCESSED_ITEMS_CACHE)
-        
         self.last_auto_post_time = datetime.now(timezone.utc) - timedelta(hours=24)
-        
         self.posts_today = 0
         self.today = datetime.now(timezone.utc).date()
-        
         self.system_prompt = config.get("bot.system_prompt", "")
-        
         self.running = False
-        
         self.tasks = []
-        
         self.error_counts = {
             'api_errors': 0,
             'rate_limit_errors': 0,
             'auth_errors': 0,
             'connection_errors': 0
         }
-        
         logger.info("机器人初始化完成")
     
     async def _load_recent_processed_items(self) -> None:
@@ -228,7 +217,6 @@ class MisskeyBot:
             self.bot_user_id = None
         
         await self._load_recent_processed_items()
-        
         await self.plugin_manager.load_plugins()
         await self.plugin_manager.on_startup()
         
@@ -288,7 +276,6 @@ class MisskeyBot:
         try:
             await self.plugin_manager.on_shutdown()
             await self.plugin_manager.cleanup_plugins()
-            
             self.scheduler.shutdown()
             
             for task in self.tasks:
@@ -300,7 +287,6 @@ class MisskeyBot:
             self.tasks = []
             
             await self.misskey.close()
-            
             await self.persistence.close()
             
         except Exception as e:
@@ -550,7 +536,6 @@ class MisskeyBot:
                     return
             
             chat_history = await self._get_chat_history(user_id)
-            
             chat_history.append({"role": "user", "content": text})
             
             if not chat_history or chat_history[0].get("role") != "system":
@@ -602,6 +587,9 @@ class MisskeyBot:
                 return
             
             plugin_results = await self.plugin_manager.on_auto_post()
+            topic_prefix = ""
+            timestamp_override = None
+            
             for result in plugin_results:
                 if result and result.get("content"):
                     post_content = result.get("content")
@@ -611,16 +599,36 @@ class MisskeyBot:
                     self.posts_today += 1
                     self.last_auto_post_time = datetime.now(timezone.utc)
                     
-                    logger.info(f"插件自动发帖成功: {post_content[:50]}{'...' if len(post_content) > 50 else ''}")
+                    logger.info(f"自动发帖成功: {post_content[:50]}{'...' if len(post_content) > 50 else ''}")
                     logger.debug(f"今日发帖计数: {self.posts_today}/{max_posts}")
                     return
+                elif result and result.get("modify_prompt"):
+                    if result.get("topic_prefix"):
+                        topic_prefix = result.get("topic_prefix")
+                    if result.get("timestamp"):
+                        timestamp_override = result.get("timestamp")
+                    logger.debug(f"插件 {result.get('plugin_name')} 请求修改提示词: {topic_prefix}")
             
             post_prompt = self.config.get("bot.auto_post.prompt", "生成一篇有趣、有见解的社交媒体帖子。")
             max_tokens = self.config.get("deepseek.max_tokens", DEFAULT_MAX_TOKENS)
             temperature = self.config.get("deepseek.temperature", DEFAULT_TEMPERATURE)
             
             try:
-                post_content = await self.deepseek.generate_post(self.system_prompt, prompt=post_prompt, max_tokens=max_tokens, temperature=temperature)
+                plugin_name = "system"
+                for result in plugin_results:
+                    if result and result.get("modify_prompt") and result.get("topic_prefix"):
+                        plugin_name = result.get("plugin_name", "unknown")
+                        break
+                
+                post_content = await self._generate_post_with_topic(
+                    self.system_prompt, 
+                    post_prompt, 
+                    topic_prefix,
+                    timestamp_override,
+                    plugin_name,
+                    max_tokens=max_tokens, 
+                    temperature=temperature
+                )
             except ValueError as e:
                 logger.warning(f"自动发帖失败: {e}，跳过本次发帖")
                 return
@@ -636,6 +644,17 @@ class MisskeyBot:
             
         except Exception as e:
             logger.error(f"自动发帖时出错: {e}")
+    
+    async def _generate_post_with_topic(self, system_prompt: str, prompt: str, topic_prefix: str, timestamp_override: Optional[int] = None, plugin_name: str = "system", max_tokens: int = DEFAULT_MAX_TOKENS, temperature: float = DEFAULT_TEMPERATURE) -> str:
+        import time
+        
+        if not prompt or not prompt.strip():
+            raise ValueError("缺少提示词")
+        
+        timestamp_min = timestamp_override if timestamp_override is not None else int(time.time() // 60)
+        full_prompt = f"[{timestamp_min}] {topic_prefix}{prompt}"
+        
+        return await self.deepseek.generate_text(full_prompt, system_prompt, max_tokens=max_tokens, temperature=temperature)
     
     def _reset_daily_post_count(self) -> None:
         self.posts_today = 0
