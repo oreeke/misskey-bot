@@ -147,11 +147,11 @@ class TopicsPlugin(PluginBase):
             return None
         try:
             topic = await self._get_next_topic()
-            topic_prefix = self.prefix_template.format(topic=topic)
+            plugin_prompt = self.prefix_template.format(topic=topic)
             timestamp_min = int(time.time() // 60)
             return {
                 "modify_prompt": True,
-                "topic_prefix": topic_prefix,
+                "plugin_prompt": plugin_prompt,
                 "timestamp": timestamp_min,
                 "plugin_name": "Topics"
             }

@@ -587,7 +587,7 @@ class MisskeyBot:
                 return
             
             plugin_results = await self.plugin_manager.on_auto_post()
-            topic_prefix = ""
+            plugin_prompt = ""
             timestamp_override = None
             
             for result in plugin_results:
@@ -603,11 +603,11 @@ class MisskeyBot:
                     logger.debug(f"今日发帖计数: {self.posts_today}/{max_posts}")
                     return
                 elif result and result.get("modify_prompt"):
-                    if result.get("topic_prefix"):
-                        topic_prefix = result.get("topic_prefix")
+                    if result.get("plugin_prompt"):
+                        plugin_prompt = result.get("plugin_prompt")
                     if result.get("timestamp"):
                         timestamp_override = result.get("timestamp")
-                    logger.debug(f"插件 {result.get('plugin_name')} 请求修改提示词: {topic_prefix}")
+                    logger.debug(f"插件 {result.get('plugin_name')} 请求修改提示词: {plugin_prompt}")
             
             post_prompt = self.config.get("bot.auto_post.prompt", "生成一篇有趣、有见解的社交媒体帖子。")
             max_tokens = self.config.get("deepseek.max_tokens", DEFAULT_MAX_TOKENS)
@@ -616,14 +616,14 @@ class MisskeyBot:
             try:
                 plugin_name = "system"
                 for result in plugin_results:
-                    if result and result.get("modify_prompt") and result.get("topic_prefix"):
+                    if result and result.get("modify_prompt") and result.get("plugin_prompt"):
                         plugin_name = result.get("plugin_name", "unknown")
                         break
                 
-                post_content = await self._generate_post_with_topic(
+                post_content = await self._generate_post_with_plugin(
                     self.system_prompt, 
                     post_prompt, 
-                    topic_prefix,
+                    plugin_prompt,
                     timestamp_override,
                     plugin_name,
                     max_tokens=max_tokens, 
@@ -645,14 +645,14 @@ class MisskeyBot:
         except Exception as e:
             logger.error(f"自动发帖时出错: {e}")
     
-    async def _generate_post_with_topic(self, system_prompt: str, prompt: str, topic_prefix: str, timestamp_override: Optional[int] = None, plugin_name: str = "system", max_tokens: int = DEFAULT_MAX_TOKENS, temperature: float = DEFAULT_TEMPERATURE) -> str:
+    async def _generate_post_with_plugin(self, system_prompt: str, prompt: str, plugin_prompt: str, timestamp_override: Optional[int] = None, plugin_name: str = "system", max_tokens: int = DEFAULT_MAX_TOKENS, temperature: float = DEFAULT_TEMPERATURE) -> str:
         import time
         
         if not prompt or not prompt.strip():
             raise ValueError("缺少提示词")
         
         timestamp_min = timestamp_override if timestamp_override is not None else int(time.time() // 60)
-        full_prompt = f"[{timestamp_min}] {topic_prefix}{prompt}"
+        full_prompt = f"[{timestamp_min}] {plugin_prompt}{prompt}"
         
         return await self.deepseek.generate_text(full_prompt, system_prompt, max_tokens=max_tokens, temperature=temperature)
     
