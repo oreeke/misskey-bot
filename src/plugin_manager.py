@@ -151,11 +151,12 @@ class PluginManager:
     
     async def cleanup_plugins(self) -> None:
         for plugin_name, plugin in self.plugins.items():
-            try:
-                await plugin.cleanup()
-                logger.debug(f"插件 {plugin_name} 清理完成")
-            except Exception as e:
-                logger.error(f"清理插件 {plugin_name} 时出错: {e}")
+            if plugin.enabled:
+                try:
+                    await plugin.cleanup()
+                    logger.debug(f"插件 {plugin_name} 清理完成")
+                except Exception as e:
+                    logger.error(f"清理插件 {plugin_name} 时出错: {e}")
     
     def get_plugin_info(self) -> List[Dict[str, Any]]:
         return [plugin.get_info() for plugin in self.plugins.values()]
