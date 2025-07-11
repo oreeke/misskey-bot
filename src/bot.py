@@ -121,7 +121,7 @@ class MisskeyBot:
             for message in recent_messages:
                 self.processed_messages.append(message['message_id'])
                 
-            logger.debug(f"已加载 {len(recent_mentions)} 个提及和 {len(recent_messages)} 个消息到内存缓存")
+            logger.debug(f"已加载 {len(recent_mentions)} 个提及和 {len(recent_messages)} 个消息到缓存")
             
         except Exception as e:
             logger.warning(f"加载已处理消息 ID 到缓存时出错: {e}，将从空状态开始")
@@ -384,7 +384,7 @@ class MisskeyBot:
                     else:
                         logger.debug(f"聊天消息已在数据库中标记为已处理: {message_id}")
                 else:
-                    logger.debug(f"聊天消息已在内存缓存中: {message_id}")
+                    logger.debug(f"聊天消息已在缓存中: {message_id}")
                         
         except Exception as e:
             logger.error(f"轮询聊天消息时出错: {e}")
