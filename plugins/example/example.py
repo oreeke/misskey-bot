@@ -21,7 +21,7 @@ class ExamplePlugin(PluginBase):
         return True
     
     async def cleanup(self) -> None:
-        logger.info("示例插件清理完成")
+        pass
     
     async def on_mention(self, mention_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not self.greeting_enabled:
@@ -73,4 +73,4 @@ class ExamplePlugin(PluginBase):
         logger.info("示例插件启动 hook 被调用")
     
     async def on_shutdown(self) -> None:
-        logger.info("示例插件关闭 hook 被调用")
+        pass

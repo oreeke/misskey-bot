@@ -30,7 +30,7 @@ class WeatherPlugin(PluginBase):
         return True
     
     async def cleanup(self) -> None:
-        logger.info("天气插件清理完成")
+        pass
     
     async def on_mention(self, mention_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not self.enabled:

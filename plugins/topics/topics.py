@@ -34,7 +34,6 @@ class TopicsPlugin(PluginBase):
     async def cleanup(self) -> None:
         if self.persistence:
             await self.persistence.close()
-        logger.info("Topics 插件清理完成")
     
     async def _create_topic_table(self) -> None:
         try:
@@ -160,8 +159,7 @@ class TopicsPlugin(PluginBase):
             return None
     
     async def on_startup(self) -> None:
-        logger.info("Topics 插件启动完成")
+        logger.info("Topics 插件已启动")
     
     async def on_shutdown(self) -> None:
         await self.cleanup()
-        logger.info("Topics 插件已关闭")
