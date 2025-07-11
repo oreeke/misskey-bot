@@ -443,7 +443,7 @@ class MisskeyBot:
             
             try:
                 reply = await self.deepseek.generate_reply(text, self.system_prompt, username, max_tokens=max_tokens, temperature=temperature)
-                logger.debug(f"DeepSeek API 生成回复成功")
+                logger.debug(f"生成提及回复成功")
             except (APIRateLimitError, APIConnectionError, AuthenticationError) as e:
                 error_message = self._handle_error(e, "生成回复时")
                 await self._send_error_reply(username, note_id, error_message)
@@ -544,7 +544,7 @@ class MisskeyBot:
             max_tokens = self.config.get("deepseek.max_tokens", DEFAULT_MAX_TOKENS)
             temperature = self.config.get("deepseek.temperature", DEFAULT_TEMPERATURE)
             reply = await self.deepseek.generate_chat_response(chat_history, max_tokens=max_tokens, temperature=temperature)
-            logger.debug(f"DeepSeek API 生成聊天回复成功")
+            logger.debug(f"生成聊天回复成功")
             
             await self.misskey.send_message(user_id, reply)
             logger.info(f"已回复用户 {user_id}: {reply[:50]}{'...' if len(reply) > 50 else ''}")

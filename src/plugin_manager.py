@@ -38,7 +38,6 @@ class PluginManager:
         logger.info(f"已发现 {len(self.plugins)} 个插件，{enabled_count} 个已启用")
     
     def _load_plugin_config(self, plugin_dir: Path) -> Dict[str, Any]:
-        """从插件目录加载配置文件"""
         config_file = plugin_dir / "config.yaml"
         if config_file.exists():
             try:
@@ -49,8 +48,7 @@ class PluginManager:
                 logger.error(f"加载插件 {plugin_dir.name} 配置文件时出错: {e}")
                 return {}
         else:
-            logger.warning(f"插件 {plugin_dir.name} 没有配置文件，使用默认配置")
-            return {}
+            return {"enabled": False}
     
     async def _load_plugin(self, plugin_dir: Path, plugin_config: Dict[str, Any]) -> None:
         try:

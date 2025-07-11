@@ -123,7 +123,6 @@ class TopicsPlugin(PluginBase):
                     (line_number,)
                 )
                 self.persistence._connection.commit()
-                logger.debug(f"已更新上次使用行数: {line_number}")
         except Exception as e:
             logger.error(f"更新上次使用行数失败: {e}")
     
