@@ -24,6 +24,10 @@ htmlcov/
 config.yaml
 !config.yaml.example
 
+# Text files
+*.txt
+!requirements.txt
+
 # Logs
 logs/
 *.log
@@ -31,7 +35,6 @@ logs/
 # Temporary files
 *.tmp
 *.bak
-*.txt
 
 # OS files
 .DS_Store
