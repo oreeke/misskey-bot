@@ -29,7 +29,7 @@ class PluginManager:
         for plugin_dir in self.plugins_dir.iterdir():
             if (plugin_dir.is_dir() and 
                 not plugin_dir.name.startswith('.') and 
-                plugin_dir.name != '__pycache__'):
+                plugin_dir.name not in {'__pycache__', 'example'}):
                 plugin_config = self._load_plugin_config(plugin_dir)
                 await self._load_plugin(plugin_dir, plugin_config)
         
