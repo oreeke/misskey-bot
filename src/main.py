@@ -17,14 +17,19 @@ from .constants import DEFAULT_LOG_LEVEL, DEFAULT_LOG_PATH
 
 bot: Optional[MisskeyBot] = None
 tasks: List[asyncio.Task] = []
+_shutdown_called: bool = False
 
 async def shutdown(signal_type=None) -> None:
-    global bot, tasks
+    global bot, tasks, _shutdown_called
+    if _shutdown_called:
+        return
+    _shutdown_called = True
+    
     shutdown_msg = f"收到信号 {signal_type.name}，关闭机器人..." if signal_type else "关闭机器人..."
     logger.info(shutdown_msg)
     await _cleanup_tasks()
     await _stop_bot()
-    logger.info("机器人已完全关闭")
+    logger.info("机器人已关闭")
 
 async def _cleanup_tasks() -> None:
     global tasks
