@@ -7,7 +7,7 @@ import importlib
 import importlib.util
 import yaml
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Type
+from typing import Dict, Any, List, Optional
 from loguru import logger
 
 from .plugin_base import PluginBase
