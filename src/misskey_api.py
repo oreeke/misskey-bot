@@ -135,6 +135,10 @@ class MisskeyAPI:
                     logger.error("API 认证失败")
                     raise AuthenticationError("Misskey API 认证失败，请检查访问令牌")
                 
+                elif response.status == HTTP_FORBIDDEN:
+                    logger.error("API 权限不足")
+                    raise AuthenticationError("Misskey API 权限不足，请求被拒绝")
+                
                 elif response.status == HTTP_TOO_MANY_REQUESTS:
                     raise APIRateLimitError("Misskey API 速率限制")
                 
@@ -335,6 +339,8 @@ class MisskeyAPI:
                 
             except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                 logger.error(f"WebSocket 连接失败: {e}")
+                if reconnect_attempts >= max_reconnect_attempts - 1:
+                    raise WebSocketConnectionError(f"WebSocket 连接失败，已达到最大重试次数: {e}")
             
             reconnect_attempts += 1
             if reconnect_attempts < max_reconnect_attempts:

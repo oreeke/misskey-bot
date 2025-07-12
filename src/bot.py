@@ -20,7 +20,8 @@ from .exceptions import (
     ConfigurationError,
     APIConnectionError,
     APIRateLimitError,
-    AuthenticationError
+    AuthenticationError,
+    WebSocketConnectionError
 )
 from .constants import (
     DEFAULT_MAX_RETRIES,
@@ -43,7 +44,8 @@ from .utils import retry_async
 ERROR_MESSAGES = {
     APIRateLimitError: "抱歉，请求过于频繁，请稍后再试。",
     AuthenticationError: "抱歉，服务配置有误，请联系管理员。",
-    APIConnectionError: "抱歉，AI服务暂时不可用，请稍后再试。",
+    APIConnectionError: "抱歉，AI 服务暂时不可用，请稍后再试。",
+    WebSocketConnectionError: "抱歉，WebSocket 连接失败，将使用轮询模式。",
     ValueError: "抱歉，请求参数无效，请检查输入。",
     RuntimeError: "抱歉，系统资源不足，请稍后再试。"
 }
@@ -61,7 +63,7 @@ class MisskeyBot:
     
     def __init__(self, config: Config):
         if not isinstance(config, Config):
-            raise ValueError("配置参数必须是Config类型")
+            raise ValueError("配置参数必须是 Config 类型")
         
         self.config = config
         self.startup_time = datetime.now(timezone.utc)
