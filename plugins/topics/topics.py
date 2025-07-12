@@ -23,7 +23,7 @@ class TopicsPlugin(PluginBase):
     async def initialize(self) -> bool:
         try:
             self.persistence = PersistenceManager()
-            await self._create_topic_table()
+            await self._create_topics_table()
             await self._load_topics()
             logger.info(f"Topics 插件初始化完成，加载了 {len(self.topics)} 个主题关键词")
             return True
@@ -35,21 +35,21 @@ class TopicsPlugin(PluginBase):
         if self.persistence:
             await self.persistence.close()
     
-    async def _create_topic_table(self) -> None:
+    async def _create_topics_table(self) -> None:
         try:
             async with self.persistence._lock:
                 cursor = self.persistence._connection.cursor()
                 cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS topic_usage (
+                    CREATE TABLE IF NOT EXISTS topics_usage (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         last_used_line INTEGER NOT NULL DEFAULT 0,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
-                cursor.execute("SELECT COUNT(*) FROM topic_usage")
+                cursor.execute("SELECT COUNT(*) FROM topics_usage")
                 count = cursor.fetchone()[0]
                 if count == 0:
-                    cursor.execute("INSERT INTO topic_usage (last_used_line) VALUES (0)")
+                    cursor.execute("INSERT INTO topics_usage (last_used_line) VALUES (0)")
                 self.persistence._connection.commit()
                 logger.debug("Topics 数据库表创建/检查完成")
         except Exception as e:
@@ -59,16 +59,16 @@ class TopicsPlugin(PluginBase):
     async def _load_topics(self) -> None:
         try:
             plugin_dir = Path(__file__).parent
-            topic_file_path = plugin_dir / "topics.txt"
-            if not topic_file_path.exists():
-                logger.warning(f"主题文件不存在: {topic_file_path}，将创建示例文件")
-                await self._create_example_topic_file(topic_file_path)
-            with open(topic_file_path, 'r', encoding='utf-8') as f:
+            topics_file_path = plugin_dir / "topics.txt"
+            if not topics_file_path.exists():
+                logger.warning(f"主题文件不存在: {topics_file_path}，将创建示例文件")
+                await self._create_example_topics_file(topics_file_path)
+            with open(topics_file_path, 'r', encoding='utf-8') as f:
                 self.topics = [line.strip() for line in f.readlines() if line.strip()]
             if not self.topics:
                 logger.warning("主题文件为空，将创建示例内容")
-                await self._create_example_topic_file(topic_file_path)
-                with open(topic_file_path, 'r', encoding='utf-8') as f:
+                await self._create_example_topics_file(topics_file_path)
+                with open(topics_file_path, 'r', encoding='utf-8') as f:
                     self.topics = [line.strip() for line in f.readlines() if line.strip()]
             logger.debug(f"成功加载 {len(self.topics)} 个主题关键词")
         except Exception as e:
@@ -76,7 +76,7 @@ class TopicsPlugin(PluginBase):
             self.topics = ["科技", "生活", "学习", "思考", "创新"]
             logger.info(f"使用默认主题关键词: {self.topics}")
     
-    async def _create_example_topic_file(self, file_path: Path) -> None:
+    async def _create_example_topics_file(self, file_path: Path) -> None:
         try:
             file_path.parent.mkdir(parents=True, exist_ok=True)
             example_topics = [
@@ -107,7 +107,7 @@ class TopicsPlugin(PluginBase):
         try:
             async with self.persistence._lock:
                 cursor = self.persistence._connection.cursor()
-                cursor.execute("SELECT last_used_line FROM topic_usage ORDER BY id DESC LIMIT 1")
+                cursor.execute("SELECT last_used_line FROM topics_usage ORDER BY id DESC LIMIT 1")
                 result = cursor.fetchone()
                 return result[0] if result else 0
         except Exception as e:
@@ -119,7 +119,7 @@ class TopicsPlugin(PluginBase):
             async with self.persistence._lock:
                 cursor = self.persistence._connection.cursor()
                 cursor.execute(
-                    "UPDATE topic_usage SET last_used_line = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1",
+                    "UPDATE topics_usage SET last_used_line = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1",
                     (line_number,)
                 )
                 self.persistence._connection.commit()
