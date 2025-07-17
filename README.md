@@ -45,8 +45,8 @@ bot:
   
   auto_post:
     enabled: true                                   # 是否启用自动发帖
-    interval_minutes: 60                            # 发帖间隔（分钟）
-    max_posts_per_day: 10                           # 每日最大发帖数量（凌晨 0 点重置计数器）
+    interval_minutes: 180                           # 发帖间隔（分钟）
+    max_posts_per_day: 8                            # 每日最大发帖数量（凌晨 0 点重置计数器）
     visibility: "public"                            # 自动发帖可见性（public/home/followers/specified）
     prompt: |                                       # 自动发帖提示词
       生成一篇有趣、有见解的社交媒体帖子。
