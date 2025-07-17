@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.env
+.venv/
+venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+
+# Config files
+config.yaml
+!config.yaml.example
+
+# Text files
+*.txt
+!requirements.txt
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# SQLite files
+data/
+
+# Security
+*.pem
+*.key
+*.crt
