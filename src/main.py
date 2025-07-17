@@ -19,7 +19,7 @@ tasks: List[asyncio.Task] = []
 _shutdown_called: bool = False
 shutdown_event: Optional[asyncio.Event] = None
 
-async def shutdown(signal_type=None) -> None:
+async def shutdown() -> None:
     global bot, tasks, _shutdown_called, shutdown_event
     if _shutdown_called:
         return

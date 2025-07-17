@@ -89,7 +89,7 @@ class Config:
         else:
             config[keys[-1]] = self._process_string_value(value, path)
     
-    def _process_string_value(self, value: str, config_path: str) -> str:
+    def _process_string_value(self, value: Any, config_path: str) -> str:
         if not isinstance(value, str):
             return value
         if value.startswith("file://"):

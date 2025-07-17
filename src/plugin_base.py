@@ -20,10 +20,10 @@ class PluginBase(ABC):
     async def cleanup(self) -> None:
         pass
     
-    async def on_mention(self, mention_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def on_mention(self, _mention_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
     
-    async def on_message(self, message_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def on_message(self, _message_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
     
     async def on_auto_post(self) -> Optional[Dict[str, Any]]:

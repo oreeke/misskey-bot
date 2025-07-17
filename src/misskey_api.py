@@ -168,8 +168,7 @@ class MisskeyAPI:
             logger.error(f"未知错误: {e}")
             raise APIConnectionError("Misskey", f"未知错误: {e}")
     
-    async def request(self, endpoint: str, data: Optional[Dict[str, Any]] = None, method: str = "POST", 
-                     retry_count: int = 0) -> Dict[str, Any]:
+    async def request(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         return await self._make_request(endpoint, data)
     
     async def create_note(self, text: str, visibility: Optional[str] = None, reply_id: Optional[str] = None) -> Dict[str, Any]:
