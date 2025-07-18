@@ -4,7 +4,7 @@
 
 一只 Python 实现的 Misskey 机器人<br>
 使用 DeepSeek 生成的内容发帖或与用户互动<br>
-支持兼容 Openai API 架构的其他模型<br>
+支持兼容 OpenAI API 架构的其他模型<br>
 目前运行在：[oreeke.com/@ai](https://oreeke.com/@ai)
 
 </div>
@@ -22,7 +22,7 @@ cd misskey-ai
 
 #### `a` 手动安装
 
-> 配置文件
+> 复制 `config.yaml.example` 为 `config.yaml` 并修改配置
 <details>
 <summary><kbd>📃 config.yaml</kbd></summary>
 
@@ -109,7 +109,7 @@ systemctl start misskey-ai.service
 
 #### `b` Docker Compose
 
-> 环境变量
+> 修改 `docker-compose.yaml` 中的环境变量
 <details>
 <summary><kbd>📃 docker-compose.yaml</kbd></summary>
 
