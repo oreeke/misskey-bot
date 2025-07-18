@@ -401,6 +401,10 @@ class MisskeyBot:
             for result in plugin_results:
                 if result and result.get("handled"):
                     logger.debug(f"提及消息已被插件处理: {result.get('plugin_name')}")
+                    response = result.get("response")
+                    if response:
+                        await self.misskey.create_note(response, reply_id=note_id)
+                        logger.info(f"已发送插件回复给 @{username}: {response[:50]}{'...' if len(response) > 50 else ''}")
                     return
             
             max_tokens = self.config.get("deepseek.max_tokens")
@@ -487,6 +491,10 @@ class MisskeyBot:
             for result in plugin_results:
                 if result and result.get("handled"):
                     logger.debug(f"私信消息已被插件处理: {result.get('plugin_name')}")
+                    response = result.get("response")
+                    if response:
+                        await self.misskey.send_message(user_id, response)
+                        logger.info(f"已发送插件回复给用户 {user_id}: {response[:50]}{'...' if len(response) > 50 else ''}")
                     return
             
             chat_history = await self._get_chat_history(user_id)
