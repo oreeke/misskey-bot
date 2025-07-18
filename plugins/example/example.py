@@ -69,9 +69,3 @@ class ExamplePlugin(PluginBase):
             "visibility": "public",
             "plugin_name": "Example"
         }
-    
-    async def on_startup(self) -> None:
-        logger.info("示例插件启动 hook 被调用")
-    
-    async def on_shutdown(self) -> None:
-        pass

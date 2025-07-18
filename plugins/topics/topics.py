@@ -158,9 +158,3 @@ class TopicsPlugin(PluginBase):
         except Exception as e:
             logger.error(f"Topics 插件处理自动发帖失败: {e}")
             return None
-    
-    async def on_startup(self) -> None:
-        logger.info("Topics 插件已启动")
-    
-    async def on_shutdown(self) -> None:
-        await self.cleanup()
