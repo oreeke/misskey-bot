@@ -11,14 +11,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.plugin_base import PluginBase
 
 class WeatherPlugin(PluginBase):
-    description = "天气查询插件，支持查询指定城市的天气信息"
+    description = "天气插件，查询指定城市的天气信息"
     
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.api_key = config.get("api_key", "")
         if not self.api_key:
             self.enabled = False
-        self.base_url = "https://api.openweathermap.org/data/3.0/onecall"
+        self.base_url = "https://api.openweathermap.org/data/2.5/weather"
         self.geocoding_url = "https://api.openweathermap.org/geo/1.0/direct"
         self.session = None
         
@@ -111,49 +111,42 @@ class WeatherPlugin(PluginBase):
                 "lon": lon,
                 "appid": self.api_key,
                 "units": "metric",
-                "lang": "zh_cn",
-                "exclude": "minutely,alerts"
+                "lang": "zh_cn"
             }
             async with self.session.get(self.base_url, params=params) as response:
                     if response.status == 200:
                         data = await response.json()
-                        return self._format_weather_info_v3(data, display_name)
+                        return self._format_weather_info_v25(data, display_name)
                     else:
-                        logger.warning(f"One Call API 请求失败，状态码: {response.status}")
+                        logger.warning(f"Weather API 2.5 请求失败，状态码: {response.status}")
                         return "抱歉，天气服务暂时不可用。"
         except Exception as e:
             logger.warning(f"获取天气信息时出错: {e}")
             return "抱歉，获取天气信息时出现错误。"
     
-    def _format_weather_info_v3(self, data: Dict[str, Any], display_name: str) -> str:
+    def _format_weather_info_v25(self, data: Dict[str, Any], display_name: str) -> str:
         try:
-            current = data["current"]
-            temp = round(current["temp"])
-            feels_like = round(current["feels_like"])
-            humidity = current["humidity"]
-            description = current["weather"][0]["description"]
-            wind_speed = current.get("wind_speed", 0)
-            uvi = current.get("uvi", 0)
+            temp = round(data["main"]["temp"])
+            feels_like = round(data["main"]["feels_like"])
+            humidity = data["main"]["humidity"]
+            pressure = data["main"]["pressure"]
+            description = data["weather"][0]["description"]
+            wind_speed = data.get("wind", {}).get("speed", 0)
+            visibility = data.get("visibility", 0) / 1000 if data.get("visibility") else 0
+            
             weather_text = f"🌤️ {display_name} 的天气:\n"
             weather_text += f"🌡️ 温度: {temp}°C (体感 {feels_like}°C)\n"
             weather_text += f"💧 湿度: {humidity}%\n"
             weather_text += f"☁️ 天气: {description}\n"
             weather_text += f"💨 风速: {wind_speed} m/s\n"
-            weather_text += f"☀️ 紫外线指数: {uvi}"
-            if "daily" in data and len(data["daily"]) >= 2:
-                daily = data["daily"]
-                today = daily[0]
-                tomorrow = daily[1]
-                weather_text += "\n\n📅 今日预报:\n"
-                weather_text += f"🌅 最高: {round(today['temp']['max'])}°C\n"
-                weather_text += f"🌙 最低: {round(today['temp']['min'])}°C\n"
-                weather_text += "\n📅 明日预报:\n"
-                weather_text += f"🌅 最高: {round(tomorrow['temp']['max'])}°C\n"
-                weather_text += f"🌙 最低: {round(tomorrow['temp']['min'])}°C\n"
-                weather_text += f"☁️ 天气: {tomorrow['weather'][0]['description']}"
+            weather_text += f"🌊 气压: {pressure} hPa"
+            
+            if visibility > 0:
+                weather_text += f"\n👁️ 能见度: {visibility:.1f} km"
+            
             return weather_text
         except KeyError as e:
-            logger.error(f"解析 One Call API 3.0 天气数据时出错: {e}")
+            logger.error(f"解析 Weather API 2.5 天气数据时出错: {e}")
             return "抱歉，天气数据格式异常。"
     
     def _format_weather_info(self, data: Dict[str, Any]) -> str:
