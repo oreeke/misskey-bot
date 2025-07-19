@@ -28,19 +28,15 @@ class ExamplePlugin(PluginBase):
         try:
             if not self.greeting_enabled:
                 return None
-            
             username = self._extract_username(mention_data)
             text = mention_data.get("text", "").lower()
-            
             if "你好" in text or "hello" in text or "hi" in text:
                 self._log_plugin_action("处理问候消息", f"来自 @{username}")
-                
                 response = {
                     "handled": True,
                     "plugin_name": "Example",
                     "response": "你好！我是示例插件，很高兴见到你！"
                 }
-                
                 if self._validate_plugin_response(response):
                     return response
                 else:
@@ -55,19 +51,15 @@ class ExamplePlugin(PluginBase):
         try:
             if not self.greeting_enabled:
                 return None
-            
             username = self._extract_username(message_data)
             text = message_data.get("text", "").lower()
-            
             if "插件" in text and "测试" in text:
                 self._log_plugin_action("处理测试消息", f"来自 @{username}")
-                
                 response = {
                     "handled": True,
                     "plugin_name": "Example",
                     "response": f"插件系统工作正常！这是来自示例插件的回复。"
                 }
-                
                 if self._validate_plugin_response(response):
                     return response
                 else:
@@ -82,15 +74,12 @@ class ExamplePlugin(PluginBase):
         try:
             if not self.auto_post_enabled:
                 return None
-            
             self._log_plugin_action("生成自动发布内容")
-            
             response = {
                 "handled": True,
                 "plugin_name": "Example",
                 "content": "这是来自示例插件的自动发布内容！"
             }
-            
             if self._validate_plugin_response(response):
                 return response
             else:

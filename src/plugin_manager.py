@@ -55,20 +55,16 @@ class PluginManager:
             if not plugin_file.exists():
                 logger.warning(f"插件目录 {plugin_dir.name} 中未找到 {plugin_dir.name}.py 文件")
                 return
-            
             spec = importlib.util.spec_from_file_location(
                 f"plugins.{plugin_dir.name}.plugin", 
                 plugin_file
             )
-            
             if spec is None or spec.loader is None:
                 logger.warning(f"无法加载插件规范: {plugin_dir.name}")
                 return
-            
             module = importlib.util.module_from_spec(spec)
             sys.modules[spec.name] = module
             spec.loader.exec_module(module)
-            
             plugin_class = None
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
@@ -77,15 +73,12 @@ class PluginManager:
                     attr is not PluginBase):
                     plugin_class = attr
                     break
-            
             if plugin_class is None:
                 logger.warning(f"插件 {plugin_dir.name} 中未找到有效的插件类")
                 return
-            
             import inspect
             sig = inspect.signature(plugin_class.__init__)
             params = list(sig.parameters.keys())[1:]
-            
             if 'name' in params and 'persistence_manager' in params:
                 plugin_instance = plugin_class(plugin_dir.name, plugin_config, self.persistence)
             elif 'name' in params:
@@ -96,10 +89,8 @@ class PluginManager:
                     plugin_instance.set_persistence(self.persistence)
             self.plugins[plugin_dir.name] = plugin_instance
             self.plugin_configs[plugin_dir.name] = plugin_config
-            
             status = "启用" if plugin_instance.enabled else "禁用"
             logger.debug(f"已发现插件: {plugin_dir.name} (状态: {status})")
-            
         except Exception as e:
             logger.warning(f"加载插件 {plugin_dir.name} 时出错: {e}")
     

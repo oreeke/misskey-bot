@@ -52,7 +52,6 @@ class TopicsPlugin(PluginBase):
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            
             result = await self.persistence_manager.execute_query("SELECT COUNT(*) FROM topics_usage")
             if not result or result[0][0] == 0:
                 initial_line = max(0, self.start_line - 1)

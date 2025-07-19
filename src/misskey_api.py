@@ -88,23 +88,17 @@ class MisskeyAPI:
     
     @retry_async(max_retries=3, retryable_exceptions=(aiohttp.ClientError, APIConnectionError))
     async def _make_request(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-
         if not endpoint or not isinstance(endpoint, str):
             raise ValueError("API 端点不能为空且必须是字符串")
-        
         if data is not None and not isinstance(data, dict):
             raise ValueError("请求数据必须是字典格式")
-        
         session = await self._ensure_session()
         url = f"{self.instance_url}/api/{endpoint}"
-        
         request_data = {"i": self.access_token}
         if data:
             request_data.update(data)
-        
         try:
             logger.debug(f"请求 Misskey API: {endpoint}")
-            
             async with session.post(url, json=request_data, headers=self.headers) as response:
                 if response.status == HTTP_OK:
                     try:
@@ -117,18 +111,14 @@ class MisskeyAPI:
                 elif response.status == HTTP_UNAUTHORIZED:
                     logger.error("API 认证失败")
                     raise AuthenticationError("Misskey API 认证失败，请检查访问令牌")
-                
                 elif response.status == HTTP_FORBIDDEN:
                     logger.error("API 权限不足")
                     raise AuthenticationError("Misskey API 权限不足，请求被拒绝")
-                
                 elif response.status == HTTP_TOO_MANY_REQUESTS:
                     raise APIRateLimitError("Misskey API 速率限制")
-                
                 elif self._is_retryable_error(response.status):
                     error_text = await response.text()
                     raise APIConnectionError("Misskey", f"HTTP {response.status}: {error_text}")
-                
                 else:
                     error_text = await response.text()
                     logger.error(f"API 请求失败: {response.status} - {error_text}")
@@ -137,10 +127,8 @@ class MisskeyAPI:
         except aiohttp.ClientError as e:
             logger.warning(f"网络错误: {e}")
             raise APIConnectionError("Misskey", f"网络连接失败: {e}")
-        
         except (AuthenticationError, ValueError):
             raise
-        
         except (ConnectionError, OSError, TimeoutError) as e:
             logger.error(f"网络连接错误: {e}")
             raise APIConnectionError("Misskey", f"网络连接错误: {e}")
@@ -204,7 +192,6 @@ class MisskeyAPI:
         }
         if since_id:
             data["sinceId"] = since_id
-        
         return await self._make_request("chat/messages/user-timeline", data)
     
     async def send_message(self, user_id: str, text: str) -> Dict[str, Any]:
@@ -212,7 +199,6 @@ class MisskeyAPI:
             "toUserId": user_id,
             "text": text,
         }
-        
         result = await self._make_request("chat/messages/create-to-user", data)
         logger.debug(f"Misskey 私信发送成功，message_id: {result.get('id', 'unknown')}")
         return result
