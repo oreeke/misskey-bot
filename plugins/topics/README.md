@@ -6,6 +6,6 @@
 
 ### 使用方法
 
-复制 `config.yaml.example` 为 `config.yaml` 并修改配置
+复制 `config.yaml.example` 为 `config.yaml` 并修改配置<br>
 像装填弹夹一样，将主题关键词写入 `topics.txt`<br>
 每次自动发帖前，插件按顺序装载一个关键词，拼接成提示前缀，AI 以此为题生成内容
