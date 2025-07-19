@@ -5,5 +5,3 @@ priority: 0                      # 插件优先级（数字越大优先级越高
 
 greeting_enabled: true           # 是否启用问候功能
 auto_post_enabled: false         # 是否启用自动发帖功能
-custom_message: "你好，这是示例插件的自定义消息！"
-max_responses_per_hour: 10       # 每小时最大响应次数
