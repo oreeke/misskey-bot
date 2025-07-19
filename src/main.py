@@ -19,6 +19,7 @@ tasks: List[asyncio.Task] = []
 _shutdown_called: bool = False
 shutdown_event: Optional[asyncio.Event] = None
 
+
 async def shutdown() -> None:
     global bot, tasks, _shutdown_called, shutdown_event
     if _shutdown_called:
@@ -31,6 +32,7 @@ async def shutdown() -> None:
         shutdown_event.set()
     logger.info("机器人已关闭")
 
+
 async def _cleanup_tasks() -> None:
     global tasks
     for task in tasks:
@@ -40,10 +42,12 @@ async def _cleanup_tasks() -> None:
         await asyncio.gather(*tasks, return_exceptions=True)
     tasks = []
 
+
 async def _stop_bot() -> None:
     global bot
     if bot:
         await bot.stop()
+
 
 async def main() -> None:
     global bot, tasks, shutdown_event
@@ -74,11 +78,13 @@ async def main() -> None:
         await shutdown()
         logger.info("再见~")
 
+
 def _signal_handler(sig):
     global shutdown_event
     logger.info(f"收到信号 {sig.name}，准备关闭...")
     if shutdown_event and not shutdown_event.is_set():
         shutdown_event.set()
+
 
 async def _setup_monitoring_and_signals() -> None:
     global tasks

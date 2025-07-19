@@ -3,6 +3,7 @@ class MisskeyBotError(Exception):
         self.message = message or "发生了未知错误"
         super().__init__(self.message)
 
+
 class ConfigurationError(MisskeyBotError):
     def __init__(self, message: str = None, config_path: str = None):
         self.config_path = config_path
@@ -12,6 +13,7 @@ class ConfigurationError(MisskeyBotError):
             error_msg = message or "配置文件存在问题"
         super().__init__(error_msg)
 
+
 class APIConnectionError(MisskeyBotError):
     def __init__(self, service_name: str, message: str = None):
         self.service_name = service_name
@@ -19,6 +21,7 @@ class APIConnectionError(MisskeyBotError):
             super().__init__(f"{service_name} API 连接失败: {message}")
         else:
             super().__init__(f"{service_name} API 连接失败")
+
 
 class APIRateLimitError(MisskeyBotError):
     def __init__(self, service_name: str, retry_after: int = None):
@@ -29,10 +32,12 @@ class APIRateLimitError(MisskeyBotError):
         else:
             super().__init__(f"{service_name} API 速率限制")
 
+
 class AuthenticationError(MisskeyBotError):
     def __init__(self, service_name: str):
         self.service_name = service_name
         super().__init__(f"{service_name} 认证失败，请检查 API 密钥")
+
 
 class WebSocketConnectionError(MisskeyBotError):
     def __init__(self, message: str = None, reconnect_attempts: int = None):
@@ -43,6 +48,7 @@ class WebSocketConnectionError(MisskeyBotError):
             error_msg = message or "WebSocket 连接失败"
         super().__init__(error_msg)
 
+
 class MisskeyAPIError(MisskeyBotError):
     def __init__(self, message: str, status_code: int = None):
         self.status_code = status_code
@@ -50,6 +56,7 @@ class MisskeyAPIError(MisskeyBotError):
             super().__init__(f"Misskey API 错误 (HTTP {status_code}): {message}")
         else:
             super().__init__(f"Misskey API 错误: {message}")
+
 
 class DeepSeekAPIError(MisskeyBotError):
     def __init__(self, message: str, error_code: str = None):

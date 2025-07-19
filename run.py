@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from src.main import main, shutdown
 import asyncio
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
-from src.main import main, shutdown
+
 
 async def handle_shutdown(error_msg: str = None) -> None:
     if error_msg:

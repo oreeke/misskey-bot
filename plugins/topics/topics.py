@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from src.plugin_base import PluginBase
 import os
 import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
 from loguru import logger
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.plugin_base import PluginBase
+
 
 class TopicsPlugin(PluginBase):
     description = "主题插件，为自动发帖插入按顺序循环的主题关键词"
-    
+
     def __init__(self, name: str, config: Dict[str, Any], persistence_manager):
         super().__init__(config)
         self.name = name
@@ -20,13 +21,13 @@ class TopicsPlugin(PluginBase):
         self.start_line = config.get("start_line", 1)
         self.topics = []
         self.enabled = config.get("enabled", True)
-        
+
     def _log_plugin_action(self, action: str, details: str = ""):
         log_msg = f"Topics插件 - {action}"
         if details:
             log_msg += f": {details}"
         logger.info(log_msg)
-    
+
     async def initialize(self) -> bool:
         try:
             if not self.persistence_manager:
@@ -39,10 +40,10 @@ class TopicsPlugin(PluginBase):
         except Exception as e:
             logger.error(f"Topics 插件初始化失败: {e}")
             return False
-    
+
     async def cleanup(self) -> None:
         pass
-    
+
     async def _create_topics_table(self) -> None:
         try:
             await self.persistence_manager.execute_update("""
@@ -63,7 +64,7 @@ class TopicsPlugin(PluginBase):
         except Exception as e:
             logger.warning(f"创建 topics 数据库表失败: {e}")
             raise
-    
+
     async def _load_topics(self) -> None:
         try:
             plugin_dir = Path(__file__).parent
@@ -72,18 +73,20 @@ class TopicsPlugin(PluginBase):
                 logger.warning(f"主题文件不存在: {topics_file_path}，将创建示例文件")
                 await self._create_example_topics_file(topics_file_path)
             with open(topics_file_path, 'r', encoding='utf-8') as f:
-                self.topics = [line.strip() for line in f.readlines() if line.strip()]
+                self.topics = [line.strip()
+                               for line in f.readlines() if line.strip()]
             if not self.topics:
                 logger.warning("主题文件为空，将创建示例内容")
                 await self._create_example_topics_file(topics_file_path)
                 with open(topics_file_path, 'r', encoding='utf-8') as f:
-                    self.topics = [line.strip() for line in f.readlines() if line.strip()]
+                    self.topics = [line.strip()
+                                   for line in f.readlines() if line.strip()]
             logger.debug(f"成功加载 {len(self.topics)} 个主题关键词")
         except Exception as e:
             logger.warning(f"加载主题文件失败: {e}")
             self.topics = ["科技", "生活", "学习", "思考", "创新"]
             logger.info(f"使用默认主题关键词: {self.topics}")
-    
+
     async def _create_example_topics_file(self, file_path: Path) -> None:
         try:
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -110,7 +113,7 @@ class TopicsPlugin(PluginBase):
             logger.info(f"已创建示例主题文件: {file_path}")
         except Exception as e:
             logger.warning(f"创建示例主题文件失败: {e}")
-    
+
     async def _get_last_used_line(self) -> int:
         try:
             result = await self.persistence_manager.execute_query(
@@ -120,7 +123,7 @@ class TopicsPlugin(PluginBase):
         except Exception as e:
             logger.warning(f"获取上次使用行数失败: {e}")
             return 0
-    
+
     async def _update_last_used_line(self, line_number: int) -> None:
         try:
             await self.persistence_manager.execute_update(
@@ -129,7 +132,7 @@ class TopicsPlugin(PluginBase):
             )
         except Exception as e:
             logger.warning(f"更新上次使用行数失败: {e}")
-    
+
     async def _get_next_topic(self) -> str:
         if not self.topics:
             return "生活"
@@ -138,12 +141,13 @@ class TopicsPlugin(PluginBase):
             next_line = last_used_line % len(self.topics)
             topic = self.topics[next_line]
             await self._update_last_used_line(last_used_line + 1)
-            self._log_plugin_action("选择主题", f"{topic} (行数: {last_used_line + 1})")
+            self._log_plugin_action(
+                "选择主题", f"{topic} (行数: {last_used_line + 1})")
             return topic
         except Exception as e:
             logger.warning(f"获取下一个主题失败: {e}")
             return self.topics[0] if self.topics else "生活"
-    
+
     async def on_auto_post(self) -> Optional[Dict[str, Any]]:
         try:
             topic = await self._get_next_topic()

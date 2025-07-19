@@ -1,29 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from src.plugin_base import PluginBase
 from typing import Dict, Any, Optional
 from loguru import logger
 import sys
 import os
 import random
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.plugin_base import PluginBase
+
 
 class ExamplePlugin(PluginBase):
     description = "示例插件，展示插件系统的基本用法"
-    
+
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.greeting_enabled = config.get("greeting_enabled", True)
         self.auto_post_enabled = config.get("auto_post_enabled", False)
-    
+
     async def initialize(self) -> bool:
-        logger.info(f"示例插件初始化完成，问候功能: {'启用' if self.greeting_enabled else '禁用'}")
+        logger.info(
+            f"示例插件初始化完成，问候功能: {'启用' if self.greeting_enabled else '禁用'}")
         return True
-    
+
     async def cleanup(self) -> None:
         pass
-    
+
     async def on_mention(self, mention_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         try:
             if not self.greeting_enabled:
@@ -46,7 +48,7 @@ class ExamplePlugin(PluginBase):
         except Exception as e:
             logger.error(f"Example 插件处理提及时出错: {e}")
             return None
-    
+
     async def on_message(self, message_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         try:
             if not self.greeting_enabled:
@@ -69,7 +71,7 @@ class ExamplePlugin(PluginBase):
         except Exception as e:
             logger.error(f"Example 插件处理消息时出错: {e}")
             return None
-    
+
     async def on_auto_post(self) -> Optional[Dict[str, Any]]:
         try:
             if not self.auto_post_enabled:

@@ -14,11 +14,13 @@ from .exceptions import ConfigurationError
 
 T = TypeVar('T')
 
+
 class Config:
     def __init__(self, config_path: Optional[str] = None):
-        self.config_path = config_path or os.environ.get("CONFIG_PATH", "config.yaml")
+        self.config_path = config_path or os.environ.get(
+            "CONFIG_PATH", "config.yaml")
         self.config: Dict[str, Any] = {}
-    
+
     async def load(self) -> None:
         config_path = Path(self.config_path)
         if not config_path.exists():
@@ -45,7 +47,7 @@ class Config:
         except Exception as e:
             logger.error(f"加载配置文件未知错误: {e}")
             raise ConfigurationError(f"加载配置文件未知错误: {e}")
-    
+
     def _override_from_env(self) -> None:
         env_mappings = {
             "MISSKEY_INSTANCE_URL": ("misskey.instance_url", str),
@@ -74,7 +76,7 @@ class Config:
             env_value = os.environ.get(env_key)
             if env_value:
                 self._set_config_value(config_path, env_value, value_type)
-    
+
     def _set_config_value(self, path: str, value: str, value_type: type) -> None:
         keys = path.split(".")
         config = self.config
@@ -88,7 +90,7 @@ class Config:
             config[keys[-1]] = float(value)
         else:
             config[keys[-1]] = self._process_string_value(value, path)
-    
+
     def _process_string_value(self, value: Any, config_path: str) -> str:
         if not isinstance(value, str):
             return value
@@ -97,7 +99,7 @@ class Config:
         if self._is_prompt_config(config_path) and self._looks_like_file_path(value):
             return self._load_from_file(value)
         return value
-    
+
     def _load_from_file(self, file_path: str) -> str:
         try:
             path = Path(file_path)
@@ -110,7 +112,7 @@ class Config:
         except Exception as e:
             logger.debug(f"无法从文件加载配置 {file_path}: {e}，使用原始值")
             return file_path
-    
+
     def _looks_like_file_path(self, value: str) -> bool:
         if len(value) > 200:
             return False
@@ -119,14 +121,14 @@ class Config:
             return True
         path_indicators = ['prompts']
         return any(indicator in value for indicator in path_indicators)
-    
+
     def _is_prompt_config(self, config_path: str) -> bool:
         prompt_configs = [
             'bot.system_prompt',
             'bot.auto_post.prompt'
         ]
         return config_path in prompt_configs
-    
+
     def _validate_config(self) -> None:
         required_configs: List[Tuple[str, str]] = [
             ("misskey.instance_url", "Misskey 实例URL"),
@@ -152,7 +154,7 @@ class Config:
             logger.error(error_msg)
             raise ValueError(error_msg)
         logger.debug("配置验证通过")
-    
+
     def get(self, key: str, default: Any = None) -> Any:
         if key == "persistence.db_path":
             return "data/misskey_ai.db"
@@ -168,14 +170,14 @@ class Config:
                     default = self._get_builtin_default(key)
                 return default
         return value
-    
+
     def _is_valid_url(self, url: str) -> bool:
         try:
             result = urlparse(url)
             return all([result.scheme, result.netloc]) and result.scheme in ['http', 'https']
         except Exception:
             return False
-    
+
     def _is_valid_api_key(self, api_key: str) -> bool:
         if not api_key or not isinstance(api_key, str):
             return False
@@ -192,7 +194,7 @@ class Config:
             if re.search(pattern, api_key_lower):
                 return False
         return True
-    
+
     def _get_builtin_default(self, key: str) -> Any:
         builtin_defaults = {
             "deepseek.model": "deepseek-chat",
@@ -213,9 +215,10 @@ class Config:
             "logging.level": "INFO",
         }
         return builtin_defaults.get(key)
-    
+
     def get_typed(self, key: str, default: T = None, expected_type: type = None) -> T:
         value = self.get(key, default)
         if expected_type and value is not None and not isinstance(value, expected_type):
-            raise ValueError(f"配置项 {key} 期望类型 {expected_type.__name__}，实际类型 {type(value).__name__}")
+            raise ValueError(
+                f"配置项 {key} 期望类型 {expected_type.__name__}，实际类型 {type(value).__name__}")
         return value

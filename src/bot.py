@@ -40,16 +40,17 @@ ERROR_MESSAGES = {
 }
 DEFAULT_ERROR_MESSAGE = "抱歉，处理您的消息时出现了错误。"
 
+
 class MisskeyBot:
-    
+
     async def __aenter__(self):
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if hasattr(self, '_cleanup_needed') and self._cleanup_needed:
             await self.stop()
         return False
-    
+
     def __init__(self, config: Config):
         if not isinstance(config, Config):
             raise ValueError("配置参数必须是 Config 类型")
@@ -79,10 +80,14 @@ class MisskeyBot:
             raise ConfigurationError(f"初始化失败: {e}")
         db_path = config.get("persistence.db_path")
         self.persistence = PersistenceManager(db_path)
-        self.plugin_manager = PluginManager(config, persistence=self.persistence)
-        self.processed_mentions: deque = deque(maxlen=MAX_PROCESSED_ITEMS_CACHE)
-        self.processed_messages: deque = deque(maxlen=MAX_PROCESSED_ITEMS_CACHE)
-        self.last_auto_post_time = datetime.now(timezone.utc) - timedelta(hours=24)
+        self.plugin_manager = PluginManager(
+            config, persistence=self.persistence)
+        self.processed_mentions: deque = deque(
+            maxlen=MAX_PROCESSED_ITEMS_CACHE)
+        self.processed_messages: deque = deque(
+            maxlen=MAX_PROCESSED_ITEMS_CACHE)
+        self.last_auto_post_time = datetime.now(
+            timezone.utc) - timedelta(hours=24)
         self.posts_today = 0
         self.today = datetime.now(timezone.utc).date()
         self.system_prompt = config.get("bot.system_prompt", "")
@@ -95,7 +100,7 @@ class MisskeyBot:
             'connection_errors': 0
         }
         logger.info("机器人初始化完成")
-    
+
     async def _load_recent_processed_items(self) -> None:
         try:
             recent_mentions = await self.persistence.get_recent_mentions(MAX_PROCESSED_ITEMS_CACHE)
@@ -104,10 +109,11 @@ class MisskeyBot:
             recent_messages = await self.persistence.get_recent_messages(MAX_PROCESSED_ITEMS_CACHE)
             for message in recent_messages:
                 self.processed_messages.append(message['message_id'])
-            logger.debug(f"已加载 {len(recent_mentions)} 个提及和 {len(recent_messages)} 个消息到缓存")
+            logger.debug(
+                f"已加载 {len(recent_mentions)} 个提及和 {len(recent_messages)} 个消息到缓存")
         except Exception as e:
             logger.warning(f"加载已处理消息 ID 到缓存时出错: {e}，将从空状态开始")
-    
+
     async def _cleanup_old_processed_items(self) -> None:
         try:
             cleanup_days = self.config.get("db.cleanup_days")
@@ -116,28 +122,29 @@ class MisskeyBot:
                 logger.debug(f"已清理 {deleted_count} 条过期记录")
         except Exception as e:
             logger.error(f"清理旧记录时出错: {e}")
-     
+
     def _handle_error(self, error: Exception, context: str = "") -> str:
         error_type = type(error).__name__
-        self.error_counts[error_type] = self.error_counts.get(error_type, 0) + 1
+        self.error_counts[error_type] = self.error_counts.get(
+            error_type, 0) + 1
         logger.error(f"错误类型: {error_type}, 上下文: {context}, 详情: {str(error)}")
         return ERROR_MESSAGES.get(type(error), DEFAULT_ERROR_MESSAGE)
-    
+
     def get_error_stats(self) -> Dict[str, int]:
         return self.error_counts.copy()
-    
+
     def _format_log_text(self, text: str, max_length: int = 50) -> str:
         if not text:
             return "None"
         return f"{text[:max_length]}{'...' if len(text) > max_length else ''}"
-    
+
     @property
     def _ai_config(self) -> Dict[str, Any]:
         return {
             'max_tokens': self.config.get("deepseek.max_tokens"),
             'temperature': self.config.get("deepseek.temperature")
         }
-    
+
     async def _mark_processed(self, item_id: str, user_id: str, username: str, item_type: str) -> None:
         if item_type == "mention":
             await self.persistence.mark_mention_processed(item_id, user_id, username)
@@ -145,23 +152,27 @@ class MisskeyBot:
         elif item_type == "message":
             await self.persistence.mark_message_processed(item_id, user_id, "private")
             self.processed_messages.append(item_id)
-    
+
     def _is_message_after_startup(self, message: Dict[str, Any]) -> bool:
         try:
-            created_at = message.get('createdAt') or message.get('created_at') or message.get('timestamp')
+            created_at = message.get('createdAt') or message.get(
+                'created_at') or message.get('timestamp')
             if not created_at:
                 logger.debug(f"消息缺少时间戳信息: {message.get('id', 'unknown')}")
                 return False
             if isinstance(created_at, str):
                 try:
-                    message_time = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    message_time = datetime.fromisoformat(
+                        created_at.replace('Z', '+00:00'))
                     if message_time.tzinfo is None:
-                        message_time = message_time.replace(tzinfo=timezone.utc)
+                        message_time = message_time.replace(
+                            tzinfo=timezone.utc)
                 except ValueError:
                     logger.debug(f"无法解析时间戳格式: {created_at}")
                     return False
             elif isinstance(created_at, (int, float)):
-                message_time = datetime.fromtimestamp(created_at / 1000 if created_at > 1e10 else created_at, tz=timezone.utc)
+                message_time = datetime.fromtimestamp(
+                    created_at / 1000 if created_at > 1e10 else created_at, tz=timezone.utc)
             else:
                 logger.debug(f"未知的时间戳类型: {type(created_at)}")
                 return False
@@ -169,12 +180,13 @@ class MisskeyBot:
             if startup_time.tzinfo is None:
                 startup_time = startup_time.replace(tzinfo=timezone.utc)
             is_after = message_time > startup_time
-            logger.debug(f"消息时间检查 - 消息时间: {message_time.isoformat()}, 启动时间: {self.startup_time.isoformat()}, 结果: {is_after}")
+            logger.debug(
+                f"消息时间检查 - 消息时间: {message_time.isoformat()}, 启动时间: {self.startup_time.isoformat()}, 结果: {is_after}")
             return is_after
         except Exception as e:
             logger.debug(f"检查消息时间时出错: {e}")
             return False
-     
+
     async def start(self) -> None:
         if self.running:
             logger.warning("机器人已在运行中")
@@ -214,13 +226,15 @@ class MisskeyBot:
             second=0,
         )
         if self.config.get("bot.auto_post.enabled"):
-            interval_minutes = self.config.get("bot.auto_post.interval_minutes")
+            interval_minutes = self.config.get(
+                "bot.auto_post.interval_minutes")
             logger.info(f"自动发帖已启用，间隔: {interval_minutes} 分钟")
             self.scheduler.add_job(
                 self._auto_post,
                 "interval",
                 minutes=interval_minutes,
-                next_run_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+                next_run_time=datetime.now(
+                    timezone.utc) + timedelta(minutes=1),
             )
         self.scheduler.start()
         websocket_task = asyncio.create_task(self._start_websocket())
@@ -228,7 +242,7 @@ class MisskeyBot:
         polling_task = asyncio.create_task(self._poll_mentions())
         self.tasks.append(polling_task)
         logger.info("服务组件就绪，开始监听消息...")
-    
+
     async def stop(self) -> None:
         if not self.running:
             logger.warning("机器人已停止")
@@ -252,16 +266,17 @@ class MisskeyBot:
         finally:
             self._cleanup_needed = False
             logger.info("服务组件已停止")
-    
+
     async def _start_websocket(self) -> None:
         @retry_async(max_retries=10, base_delay=5.0, max_delay=300.0)
         async def websocket_connect():
             await self.misskey.connect_websocket(self._handle_websocket_message)
         await websocket_connect()
-    
+
     async def _handle_websocket_message(self, data: Dict[str, Any]) -> None:
         try:
-            logger.debug(f"收到 WebSocket 消息: {json.dumps(data, ensure_ascii=False, indent=2)}")
+            logger.debug(
+                f"收到 WebSocket 消息: {json.dumps(data, ensure_ascii=False, indent=2)}")
             if data.get("type") != "channel":
                 logger.debug(f"忽略非频道消息，类型: {data.get('type')}")
                 return
@@ -277,21 +292,24 @@ class MisskeyBot:
                     logger.debug(f"处理提及消息: {note.get('id')}")
                     await self._handle_mention(note)
                 else:
-                    logger.debug(f"提及消息已处理或无效: {note.get('id') if note else 'None'}")
+                    logger.debug(
+                        f"提及消息已处理或无效: {note.get('id') if note else 'None'}")
             elif message_type in ["messaging_message", "messagingMessage", "message", "chat"] and self.config.get("bot.response.chat_enabled"):
                 message = body.get("body", {})
                 if message and message.get("id") not in self.processed_messages:
                     logger.debug(f"处理聊天消息: {message.get('id')}")
                     await self._handle_message(message)
                 else:
-                    logger.debug(f"聊天消息已处理或无效: {message.get('id') if message else 'None'}")
+                    logger.debug(
+                        f"聊天消息已处理或无效: {message.get('id') if message else 'None'}")
             else:
                 logger.debug(f"未处理的消息类型: {message_type}")
         except Exception as e:
             logger.error(f"处理 WebSocket 消息时出错: {e}")
-    
+
     async def _poll_mentions(self) -> None:
         base_delay = self.config.get("bot.response.polling_interval")
+
         async def poll_once():
             if self.config.get("bot.response.mention_enabled"):
                 mentions = await self.misskey.get_mentions(limit=100)
@@ -313,7 +331,7 @@ class MisskeyBot:
                     break
                 logger.error(f"轮询错误: {e}")
                 await asyncio.sleep(base_delay)
-    
+
     async def _poll_chat_messages(self) -> None:
         try:
             messages = await self.misskey.get_all_chat_messages(limit=100)
@@ -332,7 +350,7 @@ class MisskeyBot:
         except Exception as e:
             logger.error(f"轮询聊天消息时出错: {e}")
             logger.debug(f"轮询聊天消息详细错误: {e}", exc_info=True)
-    
+
     async def _handle_mention(self, note: Dict[str, Any]) -> None:
         mention_id = note.get("id")
         if not mention_id:
@@ -345,8 +363,10 @@ class MisskeyBot:
                 raise ValueError("提及数据必须是字典格式")
             if not text or not user_id:
                 missing_info = []
-                if not text: missing_info.append("text")
-                if not user_id: missing_info.append("user_id")
+                if not text:
+                    missing_info.append("text")
+                if not user_id:
+                    missing_info.append("user_id")
                 raise ValueError(f"提及数据缺少必要字段: {', '.join(missing_info)}")
         except ValueError as e:
             logger.error(f"输入验证错误: {e}")
@@ -370,7 +390,8 @@ class MisskeyBot:
                     if response:
                         formatted_response = f"@{username}\n{response}"
                         await self.misskey.create_note(formatted_response, reply_id=mention_id)
-                        logger.info(f"插件已回复 @{username}: {self._format_log_text(formatted_response)}")
+                        logger.info(
+                            f"插件已回复 @{username}: {self._format_log_text(formatted_response)}")
                     return
             ai_config = self._ai_config
             try:
@@ -383,7 +404,8 @@ class MisskeyBot:
             try:
                 formatted_reply = f"@{username}\n{reply}"
                 await self.misskey.create_note(formatted_reply, reply_id=mention_id)
-                logger.info(f"已回复 @{username}: {self._format_log_text(formatted_reply)}")
+                logger.info(
+                    f"已回复 @{username}: {self._format_log_text(formatted_reply)}")
             except (APIRateLimitError, APIConnectionError, AuthenticationError) as e:
                 self._handle_error(e, "发送回复时")
                 await self._send_error_reply(username, mention_id, "抱歉，回复发送失败，请稍后再试。")
@@ -398,7 +420,7 @@ class MisskeyBot:
                     await self._send_error_reply(username, mention_id, "抱歉，处理您的消息时出现了错误。")
             except Exception as reply_error:
                 logger.error(f"发送错误回复失败: {reply_error}")
-    
+
     async def _send_error_reply(self, username: str, note_id: str, message: str) -> None:
         try:
             await self.misskey.create_note(
@@ -407,9 +429,10 @@ class MisskeyBot:
             )
         except Exception as e:
             logger.error(f"发送错误回复失败: {e}")
-    
+
     async def _handle_message(self, message: Dict[str, Any]) -> None:
-        logger.debug(f"处理聊天消息: {json.dumps(message, ensure_ascii=False, indent=2)}")
+        logger.debug(
+            f"处理聊天消息: {json.dumps(message, ensure_ascii=False, indent=2)}")
         message_id = message.get("id")
         if not message_id:
             logger.debug("消息缺少 ID，跳过处理")
@@ -424,10 +447,12 @@ class MisskeyBot:
             logger.debug(f"消息已处理: {message_id}")
             return
         try:
-            text = message.get("text") or message.get("content") or message.get("body", "")
+            text = message.get("text") or message.get(
+                "content") or message.get("body", "")
             user_id = self._extract_user_id(message)
             username = self._extract_username(message)
-            logger.debug(f"解析消息 - ID: {message_id}, 用户 ID: {user_id}, 文本: {self._format_log_text(text)}...")
+            logger.debug(
+                f"解析消息 - ID: {message_id}, 用户 ID: {user_id}, 文本: {self._format_log_text(text)}...")
             if self.bot_user_id and user_id == self.bot_user_id:
                 logger.debug(f"跳过自己发送的消息: {message_id}")
                 await self._mark_processed(message_id, user_id, username, "message")
@@ -444,12 +469,14 @@ class MisskeyBot:
                     response = result.get("response")
                     if response:
                         await self.misskey.send_message(user_id, response)
-                        logger.info(f"插件已回复 @{username}: {self._format_log_text(response)}")
+                        logger.info(
+                            f"插件已回复 @{username}: {self._format_log_text(response)}")
                     return
             chat_history = await self._get_chat_history(user_id)
             chat_history.append({"role": "user", "content": text})
             if not chat_history or chat_history[0].get("role") != "system":
-                chat_history.insert(0, {"role": "system", "content": self.system_prompt})
+                chat_history.insert(
+                    0, {"role": "system", "content": self.system_prompt})
             ai_config = self._ai_config
             reply = await self.deepseek.generate_chat_response(chat_history, **ai_config)
             logger.debug(f"生成聊天回复成功")
@@ -459,7 +486,7 @@ class MisskeyBot:
         except Exception as e:
             logger.error(f"处理消息时出错: {e}")
             logger.debug(f"处理消息详细错误: {e}", exc_info=True)
-    
+
     async def _get_chat_history(self, user_id: str, limit: int = None) -> List[Dict[str, str]]:
         try:
             if limit is None:
@@ -468,14 +495,16 @@ class MisskeyBot:
             chat_history = []
             for msg in reversed(messages):
                 if msg.get("userId") == user_id:
-                    chat_history.append({"role": "user", "content": msg.get("text", "")})
+                    chat_history.append(
+                        {"role": "user", "content": msg.get("text", "")})
                 else:
-                    chat_history.append({"role": "assistant", "content": msg.get("text", "")})
+                    chat_history.append(
+                        {"role": "assistant", "content": msg.get("text", "")})
             return chat_history
         except Exception as e:
             logger.error(f"获取聊天历史时出错: {e}")
             return []
-    
+
     async def _auto_post(self) -> None:
         if not self.running:
             return
@@ -487,6 +516,7 @@ class MisskeyBot:
             if self.posts_today >= max_posts:
                 logger.debug(f"今日发帖数量已达上限 ({max_posts})，跳过自动发帖")
                 return
+
             def log_post_success(post_content: str) -> None:
                 logger.info(f"自动发帖成功: {self._format_log_text(post_content)}")
                 logger.info(f"今日发帖计数: {self.posts_today}/{max_posts}")
@@ -496,7 +526,8 @@ class MisskeyBot:
             for result in plugin_results:
                 if result and result.get("content"):
                     post_content = result.get("content")
-                    visibility = result.get("visibility", self.config.get("bot.auto_post.visibility"))
+                    visibility = result.get(
+                        "visibility", self.config.get("bot.auto_post.visibility"))
                     await self.misskey.create_note(post_content, visibility=visibility)
                     self.posts_today += 1
                     self.last_auto_post_time = datetime.now(timezone.utc)
@@ -507,8 +538,10 @@ class MisskeyBot:
                         plugin_prompt = result.get("plugin_prompt")
                     if result.get("timestamp"):
                         timestamp_override = result.get("timestamp")
-                    logger.info(f"插件 {result.get('plugin_name')} 请求修改提示词: {plugin_prompt}")
-            post_prompt = self.config.get("bot.auto_post.prompt", "生成一篇有趣、有见解的社交媒体帖子。")
+                    logger.info(
+                        f"插件 {result.get('plugin_name')} 请求修改提示词: {plugin_prompt}")
+            post_prompt = self.config.get(
+                "bot.auto_post.prompt", "生成一篇有趣、有见解的社交媒体帖子。")
             ai_config = self._ai_config
             try:
                 plugin_name = "system"
@@ -534,26 +567,27 @@ class MisskeyBot:
             log_post_success(post_content)
         except Exception as e:
             logger.error(f"自动发帖时出错: {e}")
-    
+
     async def _generate_post_with_plugin(self, system_prompt: str, prompt: str, plugin_prompt: str, timestamp_override: Optional[int] = None, plugin_name: str = "system", **ai_config) -> str:
         if not prompt:
             raise ValueError("缺少提示词")
         if not ai_config:
             ai_config = self._ai_config
-        timestamp_min = timestamp_override if timestamp_override is not None else int(time.time() // 60)
+        timestamp_min = timestamp_override if timestamp_override is not None else int(
+            time.time() // 60)
         full_prompt = f"[{timestamp_min}] {plugin_prompt}{prompt}"
         return await self.deepseek.generate_text(full_prompt, system_prompt, **ai_config)
-    
+
     def _extract_user_id(self, message: Dict[str, Any]) -> Optional[str]:
         user_info = message.get("fromUser") or message.get("user")
         if isinstance(user_info, dict):
             return user_info.get("id")
         return message.get("userId") or message.get("fromUserId")
-    
+
     def _extract_username(self, message: Dict[str, Any]) -> str:
         user_info = message.get("fromUser") or message.get("user", {})
         return user_info.get("username", "unknown") if isinstance(user_info, dict) else "unknown"
-    
+
     def _reset_daily_post_count(self) -> None:
         self.posts_today = 0
         self.today = datetime.now(timezone.utc).date()

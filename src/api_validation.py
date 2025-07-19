@@ -1,7 +1,8 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Union
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def validate_api_params(params: Dict[str, Any], required_params: list, optional_params: Dict[str, Any] = None) -> Dict[str, Any]:
     validated = {}
@@ -14,6 +15,7 @@ def validate_api_params(params: Dict[str, Any], required_params: list, optional_
             validated[param] = params.get(param, default_value)
     return validated
 
+
 def validate_string_param(value: Any, param_name: str, min_length: int = 0, max_length: int = None) -> str:
     if not isinstance(value, str):
         raise ValueError(f"{param_name} 必须是字符串")
@@ -22,6 +24,7 @@ def validate_string_param(value: Any, param_name: str, min_length: int = 0, max_
     if max_length and len(value) > max_length:
         raise ValueError(f"{param_name} 长度不能超过 {max_length} 个字符")
     return value
+
 
 def validate_numeric_param(value: Any, param_name: str, min_value: Union[int, float] = None, max_value: Union[int, float] = None) -> Union[int, float]:
     if not isinstance(value, (int, float)):
@@ -32,6 +35,7 @@ def validate_numeric_param(value: Any, param_name: str, min_value: Union[int, fl
         raise ValueError(f"{param_name} 不能大于 {max_value}")
     return value
 
+
 def validate_url_param(value: Any, param_name: str) -> str:
     if not isinstance(value, str):
         raise ValueError(f"{param_name} 必须是字符串")
@@ -39,12 +43,14 @@ def validate_url_param(value: Any, param_name: str) -> str:
         raise ValueError(f"{param_name} 必须是有效的URL")
     return value
 
+
 def validate_token_param(value: Any, param_name: str) -> str:
     if not isinstance(value, str):
         raise ValueError(f"{param_name} 必须是字符串")
     if not value.strip():
         raise ValueError(f"{param_name} 不能为空")
     return value.strip()
+
 
 def log_validation_error(error: Exception, context: str = "") -> None:
     if context:
