@@ -24,7 +24,6 @@ async def shutdown() -> None:
     if _shutdown_called:
         return
     _shutdown_called = True
-    
     logger.info("关闭机器人...")
     await _cleanup_tasks()
     await _stop_bot()
@@ -49,7 +48,6 @@ async def _stop_bot() -> None:
 async def main() -> None:
     global bot, tasks, shutdown_event
     shutdown_event = asyncio.Event()
-    
     load_dotenv()
     config = Config()
     await config.load()
@@ -86,7 +84,6 @@ async def _setup_monitoring_and_signals() -> None:
     global tasks
     memory_task = asyncio.create_task(monitor_memory_usage())
     tasks.append(memory_task)
-    
     loop = asyncio.get_running_loop()
     if sys.platform != 'win32':
         signals = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)

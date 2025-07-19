@@ -25,47 +25,77 @@ class ExamplePlugin(PluginBase):
         pass
     
     async def on_mention(self, mention_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        if not self.greeting_enabled:
+        try:
+            if not self.greeting_enabled:
+                return None
+            
+            username = self._extract_username(mention_data)
+            text = mention_data.get("text", "").lower()
+            
+            if "你好" in text or "hello" in text or "hi" in text:
+                self._log_plugin_action("处理问候消息", f"来自 @{username}")
+                
+                response = {
+                    "handled": True,
+                    "plugin_name": "Example",
+                    "response": "你好！我是示例插件，很高兴见到你！"
+                }
+                
+                if self._validate_plugin_response(response):
+                    return response
+                else:
+                    logger.error(f"Example 插件响应验证失败")
+                    return None
             return None
-        text = mention_data.get("text", "").lower()
-        user = mention_data.get("user", {})
-        username = user.get("username", "用户")
-        if "你好" in text or "hello" in text or "hi" in text:
-            logger.info(f"示例插件处理问候消息: @{username}")
-            return {
-                "handled": True,
-                "plugin_name": "Example",
-                "response": f"@{username} 你好！我是示例插件，很高兴见到你！"
-            }
-        return None
+        except Exception as e:
+            logger.error(f"Example 插件处理提及时出错: {e}")
+            return None
     
     async def on_message(self, message_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        if not self.greeting_enabled:
+        try:
+            if not self.greeting_enabled:
+                return None
+            
+            username = self._extract_username(message_data)
+            text = message_data.get("text", "").lower()
+            
+            if "插件" in text and "测试" in text:
+                self._log_plugin_action("处理测试消息", f"来自 @{username}")
+                
+                response = {
+                    "handled": True,
+                    "plugin_name": "Example",
+                    "response": f"插件系统工作正常！这是来自示例插件的回复。"
+                }
+                
+                if self._validate_plugin_response(response):
+                    return response
+                else:
+                    logger.error(f"Example 插件响应验证失败")
+                    return None
             return None
-        text = message_data.get("text", "").lower()
-        if "插件" in text and "测试" in text:
-            logger.info("示例插件处理测试消息")
-            return {
-                "handled": True,
-                "plugin_name": "Example",
-                "response": "插件系统工作正常！这是来自示例插件的回复。"
-            }
-        return None
+        except Exception as e:
+            logger.error(f"Example 插件处理消息时出错: {e}")
+            return None
     
     async def on_auto_post(self) -> Optional[Dict[str, Any]]:
-        if not self.auto_post_enabled:
+        try:
+            if not self.auto_post_enabled:
+                return None
+            
+            self._log_plugin_action("生成自动发布内容")
+            
+            response = {
+                "handled": True,
+                "plugin_name": "Example",
+                "content": "这是来自示例插件的自动发布内容！"
+            }
+            
+            if self._validate_plugin_response(response):
+                return response
+            else:
+                logger.error(f"Example 插件响应验证失败")
+                return None
+        except Exception as e:
+            logger.error(f"Example 插件生成自动发布内容时出错: {e}")
             return None
-
-        posts = [
-            "🤖 插件系统正在运行中...",
-            "💡 今天又是充满可能性的一天！",
-            "🌟 示例插件向大家问好！",
-            "🔧 插件化架构让扩展变得简单！"
-        ]
-        content = random.choice(posts)
-        logger.info("示例插件生成自动发帖内容")
-        return {
-            "content": content,
-            "visibility": "public",
-            "plugin_name": "Example"
-        }

@@ -26,14 +26,12 @@ class PluginManager:
         if not self.plugins_dir.exists():
             logger.info(f"插件目录不存在: {self.plugins_dir}")
             return
-        
         for plugin_dir in self.plugins_dir.iterdir():
             if (plugin_dir.is_dir() and 
                 not plugin_dir.name.startswith('.') and 
                 plugin_dir.name not in {'__pycache__', 'example'}):
                 plugin_config = self._load_plugin_config(plugin_dir)
                 await self._load_plugin(plugin_dir, plugin_config)
-        
         await self._initialize_plugins()
         enabled_count = sum(1 for plugin in self.plugins.values() if plugin.enabled)
         logger.info(f"已发现 {len(self.plugins)} 个插件，{enabled_count} 个已启用")
@@ -76,7 +74,7 @@ class PluginManager:
                 attr = getattr(module, attr_name)
                 if (isinstance(attr, type) and 
                     issubclass(attr, PluginBase) and 
-                    attr != PluginBase):
+                    attr is not PluginBase):
                     plugin_class = attr
                     break
             
@@ -84,9 +82,18 @@ class PluginManager:
                 logger.warning(f"插件 {plugin_dir.name} 中未找到有效的插件类")
                 return
             
-            plugin_instance = plugin_class(plugin_config)
-            if hasattr(plugin_instance, 'set_persistence') and self.persistence:
-                plugin_instance.set_persistence(self.persistence)
+            import inspect
+            sig = inspect.signature(plugin_class.__init__)
+            params = list(sig.parameters.keys())[1:]
+            
+            if 'name' in params and 'persistence_manager' in params:
+                plugin_instance = plugin_class(plugin_dir.name, plugin_config, self.persistence)
+            elif 'name' in params:
+                plugin_instance = plugin_class(plugin_dir.name, plugin_config)
+            else:
+                plugin_instance = plugin_class(plugin_config)
+                if hasattr(plugin_instance, 'set_persistence') and self.persistence:
+                    plugin_instance.set_persistence(self.persistence)
             self.plugins[plugin_dir.name] = plugin_instance
             self.plugin_configs[plugin_dir.name] = plugin_config
             
@@ -102,7 +109,6 @@ class PluginManager:
             key=lambda x: x[1].priority,
             reverse=True
         )
-        
         for plugin_name, plugin in sorted_plugins:
             try:
                 if plugin.enabled:
@@ -118,13 +124,11 @@ class PluginManager:
     
     async def call_plugin_hook(self, hook_name: str, *args, **kwargs) -> List[Any]:
         results = []
-        
         sorted_plugins = sorted(
             [(name, plugin) for name, plugin in self.plugins.items() if plugin.enabled],
             key=lambda x: x[1].priority,
             reverse=True
         )
-        
         for plugin_name, plugin in sorted_plugins:
             try:
                 if hasattr(plugin, hook_name):
@@ -134,7 +138,6 @@ class PluginManager:
                         results.append(result)
             except Exception as e:
                 logger.error(f"调用插件 {plugin_name} 的 {hook_name} hook 时出错: {e}")
-        
         return results
     
     async def on_mention(self, mention_data: Dict[str, Any]) -> List[Dict[str, Any]]:

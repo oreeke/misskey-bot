@@ -12,24 +12,29 @@ from src.plugin_base import PluginBase
 class TopicsPlugin(PluginBase):
     description = "主题插件，为自动发帖插入按顺序循环的主题关键词"
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, name: str, config: Dict[str, Any], persistence_manager):
         super().__init__(config)
+        self.name = name
+        self.persistence_manager = persistence_manager
         self.prefix_template = config.get("prefix_template", "以{topic}为主题，")
         self.start_line = config.get("start_line", 1)
-        self.persistence = None
         self.topics = []
+        self.enabled = config.get("enabled", True)
         
-    def set_persistence(self, persistence):
-        self.persistence = persistence
+    def _log_plugin_action(self, action: str, details: str = ""):
+        log_msg = f"Topics插件 - {action}"
+        if details:
+            log_msg += f": {details}"
+        logger.info(log_msg)
     
     async def initialize(self) -> bool:
         try:
-            if not self.persistence:
-                logger.error("Topics 插件未获得 persistence 实例")
+            if not self.persistence_manager:
+                logger.error("Topics 插件未获得 persistence_manager 实例")
                 return False
             await self._create_topics_table()
             await self._load_topics()
-            logger.info(f"Topics 插件初始化完成，加载了 {len(self.topics)} 个主题关键词")
+            self._log_plugin_action("初始化完成", f"加载了 {len(self.topics)} 个主题关键词")
             return True
         except Exception as e:
             logger.error(f"Topics 插件初始化失败: {e}")
@@ -40,22 +45,22 @@ class TopicsPlugin(PluginBase):
     
     async def _create_topics_table(self) -> None:
         try:
-            async with self.persistence._lock:
-                cursor = self.persistence._connection.cursor()
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS topics_usage (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        last_used_line INTEGER NOT NULL DEFAULT 0,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                cursor.execute("SELECT COUNT(*) FROM topics_usage")
-                count = cursor.fetchone()[0]
-                if count == 0:
-                    initial_line = max(0, self.start_line - 1)
-                    cursor.execute("INSERT INTO topics_usage (last_used_line) VALUES (?)", (initial_line,))
-                self.persistence._connection.commit()
-                logger.debug("Topics 数据库表创建/检查完成")
+            await self.persistence_manager.execute_update("""
+                CREATE TABLE IF NOT EXISTS topics_usage (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    last_used_line INTEGER NOT NULL DEFAULT 0,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            result = await self.persistence_manager.execute_query("SELECT COUNT(*) FROM topics_usage")
+            if not result or result[0][0] == 0:
+                initial_line = max(0, self.start_line - 1)
+                await self.persistence_manager.execute_insert(
+                    "INSERT INTO topics_usage (last_used_line) VALUES (?)", 
+                    (initial_line,)
+                )
+            logger.debug("Topics 数据库表创建/检查完成")
         except Exception as e:
             logger.warning(f"创建 topics 数据库表失败: {e}")
             raise
@@ -109,24 +114,20 @@ class TopicsPlugin(PluginBase):
     
     async def _get_last_used_line(self) -> int:
         try:
-            async with self.persistence._lock:
-                cursor = self.persistence._connection.cursor()
-                cursor.execute("SELECT last_used_line FROM topics_usage ORDER BY id DESC LIMIT 1")
-                result = cursor.fetchone()
-                return result[0] if result else 0
+            result = await self.persistence_manager.execute_query(
+                "SELECT last_used_line FROM topics_usage ORDER BY id DESC LIMIT 1"
+            )
+            return result[0][0] if result else 0
         except Exception as e:
             logger.warning(f"获取上次使用行数失败: {e}")
             return 0
     
     async def _update_last_used_line(self, line_number: int) -> None:
         try:
-            async with self.persistence._lock:
-                cursor = self.persistence._connection.cursor()
-                cursor.execute(
-                    "UPDATE topics_usage SET last_used_line = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1",
-                    (line_number,)
-                )
-                self.persistence._connection.commit()
+            await self.persistence_manager.execute_update(
+                "UPDATE topics_usage SET last_used_line = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1",
+                (line_number,)
+            )
         except Exception as e:
             logger.warning(f"更新上次使用行数失败: {e}")
     
@@ -138,15 +139,13 @@ class TopicsPlugin(PluginBase):
             next_line = last_used_line % len(self.topics)
             topic = self.topics[next_line]
             await self._update_last_used_line(last_used_line + 1)
-            logger.info(f"选择主题: {topic} (行数: {last_used_line + 1})")
+            self._log_plugin_action("选择主题", f"{topic} (行数: {last_used_line + 1})")
             return topic
         except Exception as e:
             logger.warning(f"获取下一个主题失败: {e}")
             return self.topics[0] if self.topics else "生活"
     
     async def on_auto_post(self) -> Optional[Dict[str, Any]]:
-        if not self.enabled:
-            return None
         try:
             topic = await self._get_next_topic()
             plugin_prompt = self.prefix_template.format(topic=topic)

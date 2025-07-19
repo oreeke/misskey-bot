@@ -158,7 +158,6 @@ class Config:
             return "data/misskey_ai.db"
         if key == "logging.path":
             return "logs"
-            
         keys = key.split(".")
         value = self.config
         for k in keys:
@@ -174,8 +173,6 @@ class Config:
         try:
             result = urlparse(url)
             return all([result.scheme, result.netloc]) and result.scheme in ['http', 'https']
-        except (ValueError, TypeError):
-            return False
         except Exception:
             return False
     
@@ -202,7 +199,6 @@ class Config:
             "deepseek.api_base": "https://api.deepseek.com/v1",
             "deepseek.max_tokens": 1000,
             "deepseek.temperature": 0.8,
-            
             "bot.auto_post.enabled": True,
             "bot.auto_post.interval_minutes": 180,
             "bot.auto_post.max_posts_per_day": 8,
@@ -211,12 +207,9 @@ class Config:
             "bot.response.chat_enabled": True,
             "bot.response.chat_memory": 10,
             "bot.response.polling_interval": 60,
-            
             "api.timeout": 30,
             "api.max_retries": 3,
-            
             "db.cleanup_days": 30,
-            
             "logging.level": "INFO",
         }
         return builtin_defaults.get(key)

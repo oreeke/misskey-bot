@@ -35,43 +35,48 @@ class WeatherPlugin(PluginBase):
         if self.session:
             await self.session.close()
     
-    async def on_mention(self, mention_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        if not self.enabled:
+    async def on_mention(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        try:
+            username = self._extract_username(data)
+            text = data.get("text", "")
+            if "天气" in text or "weather" in text:
+                location_match = re.search(r'(?:天气|weather)\s*([\u4e00-\u9fa5a-zA-Z\s]+)', text)
+                return await self._handle_weather_request(username, location_match)
             return None
-        text = mention_data.get("text", "")
-        user = mention_data.get("user", {})
-        username = user.get("username", "用户")
-        weather_match = re.search(r'天气\s*([\u4e00-\u9fa5a-zA-Z\s]+)', text)
-        if weather_match:
-            city = weather_match.group(1).strip()
-            if city:
-                weather_info = await self._get_weather(city)
-                if weather_info:
-                    logger.info(f"天气插件为 @{username} 查询 {city} 的天气")
-                    return {
-                        "handled": True,
-                        "plugin_name": "Weather",
-                        "response": f"@{username} {weather_info}"
-                    }
-        return None
+        except Exception as e:
+            logger.error(f"Weather 插件处理提及时出错: {e}")
+            return None
     
     async def on_message(self, message_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        if not self.enabled:
+        try:
+            username = self._extract_username(message_data)
+            text = message_data.get("text", "")
+            if "天气" in text:
+                location_match = re.search(r'(?:天气|weather)\s*([\u4e00-\u9fa5a-zA-Z\s]+)', text)
+                return await self._handle_weather_request(username, location_match)
             return None
-        text = message_data.get("text", "")
-        weather_match = re.search(r'天气\s*([\u4e00-\u9fa5a-zA-Z\s]+)', text)
-        if weather_match:
-            city = weather_match.group(1).strip()
-            if city:
-                weather_info = await self._get_weather(city)
-                if weather_info:
-                    logger.info(f"天气插件查询 {city} 的天气")
-                    return {
-                        "handled": True,
-                        "plugin_name": "Weather",
-                        "response": weather_info
-                    }
-        return None
+        except Exception as e:
+            logger.error(f"Weather 插件处理消息时出错: {e}")
+            return None
+    
+    async def _handle_weather_request(self, username: str, location_match) -> Optional[Dict[str, Any]]:
+        if location_match:
+            location = location_match.group(1).strip()
+        else:
+            location = "北京"
+        self._log_plugin_action("处理天气查询", f"来自 @{username}，查询 {location}")
+        weather_info = await self._get_weather(location)
+        response_text = weather_info or f"抱歉，无法获取 {location} 的天气信息。"
+        response = {
+            "handled": True,
+            "plugin_name": self.name,
+            "response": response_text
+        }
+        if self._validate_plugin_response(response):
+            return response
+        else:
+            logger.error(f"Weather 插件响应验证失败")
+            return None
     
     async def _get_coordinates(self, city: str) -> Optional[tuple]:
         try:
@@ -133,17 +138,14 @@ class WeatherPlugin(PluginBase):
             description = data["weather"][0]["description"]
             wind_speed = data.get("wind", {}).get("speed", 0)
             visibility = data.get("visibility", 0) / 1000 if data.get("visibility") else 0
-            
             weather_text = f"🌤️ {display_name} 的天气:\n"
             weather_text += f"🌡️ 温度: {temp}°C (体感 {feels_like}°C)\n"
             weather_text += f"💧 湿度: {humidity}%\n"
             weather_text += f"☁️ 天气: {description}\n"
             weather_text += f"💨 风速: {wind_speed} m/s\n"
             weather_text += f"🌊 气压: {pressure} hPa"
-            
             if visibility > 0:
                 weather_text += f"\n👁️ 能见度: {visibility:.1f} km"
-            
             return weather_text
         except KeyError as e:
             logger.error(f"解析 Weather API 2.5 天气数据时出错: {e}")
