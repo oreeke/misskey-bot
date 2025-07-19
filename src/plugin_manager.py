@@ -27,8 +27,8 @@ class PluginManager:
             logger.info(f"插件目录不存在: {self.plugins_dir}")
             return
         for plugin_dir in self.plugins_dir.iterdir():
-            if (plugin_dir.is_dir() and 
-                not plugin_dir.name.startswith('.') and 
+            if (plugin_dir.is_dir() and
+                not plugin_dir.name.startswith('.') and
                 plugin_dir.name not in {'__pycache__', 'example'}):
                 plugin_config = self._load_plugin_config(plugin_dir)
                 await self._load_plugin(plugin_dir, plugin_config)
@@ -56,7 +56,7 @@ class PluginManager:
                 logger.warning(f"插件目录 {plugin_dir.name} 中未找到 {plugin_dir.name}.py 文件")
                 return
             spec = importlib.util.spec_from_file_location(
-                f"plugins.{plugin_dir.name}.plugin", 
+                f"plugins.{plugin_dir.name}.plugin",
                 plugin_file
             )
             if spec is None or spec.loader is None:
@@ -68,8 +68,8 @@ class PluginManager:
             plugin_class = None
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if (isinstance(attr, type) and 
-                    issubclass(attr, PluginBase) and 
+                if (isinstance(attr, type) and
+                    issubclass(attr, PluginBase) and
                     attr is not PluginBase):
                     plugin_class = attr
                     break
@@ -96,7 +96,7 @@ class PluginManager:
     
     async def _initialize_plugins(self) -> None:
         sorted_plugins = sorted(
-            self.plugins.items(), 
+            self.plugins.items(),
             key=lambda x: x[1].priority,
             reverse=True
         )

@@ -13,7 +13,7 @@ from loguru import logger
 
 T = TypeVar('T')
 
-def retry_async(max_retries: int = 3, base_delay: float = 1.0, max_delay: float = 60.0, 
+def retry_async(max_retries: int = 3, base_delay: float = 1.0, max_delay: float = 60.0,
                 backoff_factor: float = 2.0, retryable_exceptions: tuple = None):
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
@@ -34,7 +34,7 @@ def retry_async(max_retries: int = 3, base_delay: float = 1.0, max_delay: float 
         return wrapper
     return decorator
 
-def calculate_retry_delay(attempt: int, base_delay: float = 1.0, 
+def calculate_retry_delay(attempt: int, base_delay: float = 1.0,
                          backoff_factor: float = 2.0, max_delay: float = 60.0) -> float:
     delay = base_delay * (backoff_factor ** attempt)
     delay = min(delay, max_delay)

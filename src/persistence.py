@@ -20,7 +20,7 @@ class PersistenceManager:
     async def initialize(self) -> None:
         async with self._lock:
             self._connection = sqlite3.connect(
-                self.db_path, 
+                self.db_path,
                 check_same_thread=False,
                 timeout=30.0
             )
@@ -116,9 +116,9 @@ class PersistenceManager:
         return bool(results)
     
     async def mark_mention_processed(
-        self, 
-        note_id: str, 
-        user_id: Optional[str] = None, 
+        self,
+        note_id: str,
+        user_id: Optional[str] = None,
         username: Optional[str] = None
     ) -> None:
         await self.execute_insert(
@@ -127,9 +127,9 @@ class PersistenceManager:
         )
     
     async def mark_message_processed(
-        self, 
-        message_id: str, 
-        user_id: Optional[str] = None, 
+        self,
+        message_id: str,
+        user_id: Optional[str] = None,
         chat_type: Optional[str] = None
     ) -> None:
         await self.execute_insert(

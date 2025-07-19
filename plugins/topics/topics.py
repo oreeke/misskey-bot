@@ -56,7 +56,7 @@ class TopicsPlugin(PluginBase):
             if not result or result[0][0] == 0:
                 initial_line = max(0, self.start_line - 1)
                 await self.persistence_manager.execute_insert(
-                    "INSERT INTO topics_usage (last_used_line) VALUES (?)", 
+                    "INSERT INTO topics_usage (last_used_line) VALUES (?)",
                     (initial_line,)
                 )
             logger.debug("Topics 数据库表创建/检查完成")

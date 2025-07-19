@@ -103,7 +103,7 @@ class DeepSeekAPI:
         except (ValueError, TypeError, KeyError) as e:
             raise ValueError(f"API 响应数据格式错误: {e}")
     
-    async def generate_text(self, prompt: str, system_prompt: Optional[str] = None, 
+    async def generate_text(self, prompt: str, system_prompt: Optional[str] = None,
                             max_tokens: int = 1000, temperature: float = 0.8) -> str:
         self._validate_params(prompt, system_prompt, max_tokens, temperature)
         messages = []
@@ -180,7 +180,7 @@ class DeepSeekAPI:
         except (ValueError, TypeError, KeyError) as e:
             raise ValueError(f"API 响应数据格式错误: {e}")
     
-    async def generate_chat_response(self, messages: List[Dict[str, str]], 
+    async def generate_chat_response(self, messages: List[Dict[str, str]],
                                       max_tokens: int = 1000, temperature: float = 0.8) -> str:
         self._validate_chat_messages(messages, max_tokens, temperature)
         try:

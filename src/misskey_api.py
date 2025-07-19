@@ -233,7 +233,7 @@ class MisskeyAPI:
                 logger.error(f"WebSocket 心跳未知错误: {e}")
                 await asyncio.sleep(5)
     
-    async def connect_websocket(self, callback: Callable[[Dict[str, Any]], Any], 
+    async def connect_websocket(self, callback: Callable[[Dict[str, Any]], Any],
                                 max_reconnect_attempts: int = WS_MAX_RECONNECT_ATTEMPTS) -> None:
         reconnect_attempts = 0
         reconnect_delay = WS_RECONNECT_DELAY

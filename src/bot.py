@@ -517,8 +517,8 @@ class MisskeyBot:
                         plugin_name = result.get("plugin_name", "unknown")
                         break
                 post_content = await self._generate_post_with_plugin(
-                    self.system_prompt, 
-                    post_prompt, 
+                    self.system_prompt,
+                    post_prompt,
                     plugin_prompt,
                     timestamp_override,
                     plugin_name,
